@@ -386,19 +386,54 @@
     sortBtn.onclick = toggleSortOrder;
     controls.appendChild(sortBtn);
 
+// Query Input Group
+    const queryGroup = document.createElement('div');
+    queryGroup.style.cssText = 'display:flex;flex-direction:column;gap:4px;flex:1;min-width:350px';
+    
+    const queryLabel = document.createElement('label');
+    queryLabel.textContent = 'LogQL Query';
+    queryLabel.style.cssText = 'font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px';
+    
     const queryInput = document.createElement("input");
     queryInput.id = "loki-query-input";
     queryInput.className = "query-input";
+    queryInput.placeholder = 'e.g. {job="grafana"} | json';
     queryInput.value = parseUrlForQuery() || '{service_name="sunco", zendesk_pod="pod26"} | json';
-    controls.appendChild(queryInput);
+    
+    const queryHint = document.createElement('div');
+    queryHint.textContent = 'LogQL query expression for filtering logs';
+    queryHint.style.cssText = 'font-size:10px;color:#64748b';
+    
+    queryGroup.appendChild(queryLabel);
+    queryGroup.appendChild(queryInput);
+    queryGroup.appendChild(queryHint);
+    controls.appendChild(queryGroup);
 
+    // Time Range Input Group
+    const timeGroup = document.createElement('div');
+    timeGroup.style.cssText = 'display:flex;flex-direction:column;gap:4px;min-width:120px';
+    
+    const timeLabel = document.createElement('label');
+    timeLabel.textContent = 'Time Range (Minutes)';
+    timeLabel.style.cssText = 'font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px';
+    
     const timeInput = document.createElement("input");
     timeInput.id = "loki-time-input";
     timeInput.className = "time-input";
     timeInput.type = "number";
+    timeInput.placeholder = '5';
     timeInput.value = parseUrlForTimeRange();
     timeInput.min = "1";
-    controls.appendChild(timeInput);
+    timeInput.max = "1440";
+    
+    const timeHint = document.createElement('div');
+    timeHint.textContent = 'Minutes back from now (1-1440)';
+    timeHint.style.cssText = 'font-size:10px;color:#64748b';
+    
+    timeGroup.appendChild(timeLabel);
+    timeGroup.appendChild(timeInput);
+    timeGroup.appendChild(timeHint);
+    controls.appendChild(timeGroup);
 
     const queryBtn = document.createElement("button");
     queryBtn.textContent = "🔗 Query";
