@@ -386,7 +386,6 @@
     sortBtn.onclick = toggleSortOrder;
     controls.appendChild(sortBtn);
 
-// Query Input Group
 const queryGroup = document.createElement('div');
 queryGroup.style.cssText = 'display:flex;flex-direction:column;gap:4px;flex:1;min-width:350px';
 const queryLabel = document.createElement('label');
@@ -406,7 +405,6 @@ queryGroup.appendChild(queryInput);
 queryGroup.appendChild(queryHint);
 n.appendChild(queryGroup);
 
-// Time Range Input Group
 const timeGroup = document.createElement('div');
 timeGroup.style.cssText = 'display:flex;flex-direction:column;gap:4px;min-width:120px';
 const timeLabel = document.createElement('label');
