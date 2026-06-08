@@ -370,25 +370,28 @@
     header.innerHTML = `<div><h2 style="margin:0;font-size:18px;color:#0ea5e9">📊 Logs</h2><p style="margin:5px 0 0 0;font-size:12px;color:#94a3b8">Total: ${STATE.allLogs.length} | Shown: ${STATE.filteredLogs.length}</p></div><button id="close-popup" style="padding:6px 12px;background:#ef4444;border:none;border-radius:4px;color:#fff;cursor:pointer;font-weight:bold">Close</button>`;
     popup.appendChild(header);
 
-    const controls = document.createElement("div");
-    controls.style.cssText = `background:#0f172a;padding:12px 15px;border-bottom:1px solid #334155;display:flex;gap:10px;flex-wrap:wrap;align-items:center`;
+const controls = document.createElement("div");
+    controls.style.cssText = `background:#0f172a;padding:15px;border-bottom:1px solid #334155;display:flex;flex-direction:column;gap:12px`;
 
+    // ROW 1: Filter Level Buttons
+    const row1 = document.createElement("div");
+    row1.style.cssText = `display:flex;gap:10px;align-items:center`;
+    
     ["INFO", "WARN", "ERROR"].forEach(level => {
       const btn = document.createElement("button");
       btn.id = `filter-${level}`;
       btn.textContent = `${level} (${STATE.allLogs.filter(l => l.level === level).length})`;
       btn.style.cssText = `padding:6px 12px;border:2px solid ${STATE.filters[level] ? getColorForLevel(level) : "#475569"};background:${STATE.filters[level] ? getColorForLevel(level) + "20" : "#1e293b"};color:${getColorForLevel(level)};border-radius:4px;cursor:pointer;font-weight:bold;font-size:12px`;
       btn.onclick = () => toggleFilter(level);
-      controls.appendChild(btn);
+      row1.appendChild(btn);
     });
+    controls.appendChild(row1);
 
-    const sortBtn = document.createElement("button");
-    sortBtn.textContent = `⬇️ ${STATE.sortOrder === "DESC" ? "Newest" : "Oldest"}`;
-    sortBtn.style.cssText = `padding:6px 12px;background:#10b981;border:none;color:#fff;border-radius:4px;cursor:pointer;font-weight:bold;font-size:12px`;
-    sortBtn.onclick = toggleSortOrder;
-    controls.appendChild(sortBtn);
+    // ROW 2: Query, Time Range, Query Button
+    const row2 = document.createElement("div");
+    row2.style.cssText = `display:flex;gap:10px;align-items:flex-end`;
 
-// Query Input Group
+    // Query Input Group
     const queryGroup = document.createElement('div');
     queryGroup.style.cssText = 'display:flex;flex-direction:column;gap:4px;flex:1;min-width:350px';
     
@@ -401,22 +404,23 @@
     queryInput.className = "query-input";
     queryInput.placeholder = 'e.g. {job="grafana"} | json';
     queryInput.value = parseUrlForQuery() || '{service_name="sunco", zendesk_pod="pod26"} | json';
+    queryInput.style.cssText = 'padding:8px 10px;background:#0f172a;border:1px solid #475569;color:#cbd5e1;border-radius:4px;font-family:"Monaco","Courier New",monospace;font-size:11px';
     
     const queryHint = document.createElement('div');
-    queryHint.textContent = 'LogQL query expression for filtering logs';
+    queryHint.textContent = 'LogQL query expression';
     queryHint.style.cssText = 'font-size:10px;color:#64748b';
     
     queryGroup.appendChild(queryLabel);
     queryGroup.appendChild(queryInput);
     queryGroup.appendChild(queryHint);
-    controls.appendChild(queryGroup);
+    row2.appendChild(queryGroup);
 
     // Time Range Input Group
     const timeGroup = document.createElement('div');
     timeGroup.style.cssText = 'display:flex;flex-direction:column;gap:4px;min-width:120px';
     
     const timeLabel = document.createElement('label');
-    timeLabel.textContent = 'Time Range (Minutes)';
+    timeLabel.textContent = 'Time Range (Min)';
     timeLabel.style.cssText = 'font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px';
     
     const timeInput = document.createElement("input");
@@ -427,22 +431,42 @@
     timeInput.value = parseUrlForTimeRange();
     timeInput.min = "1";
     timeInput.max = "1440";
+    timeInput.style.cssText = 'padding:8px 10px;background:#0f172a;border:1px solid #475569;color:#cbd5e1;border-radius:4px;font-family:"Monaco","Courier New",monospace;font-size:11px';
     
     const timeHint = document.createElement('div');
-    timeHint.textContent = 'Minutes back from now (1-1440)';
+    timeHint.textContent = 'Minutes back';
     timeHint.style.cssText = 'font-size:10px;color:#64748b';
     
     timeGroup.appendChild(timeLabel);
     timeGroup.appendChild(timeInput);
     timeGroup.appendChild(timeHint);
-    controls.appendChild(timeGroup);
+    row2.appendChild(timeGroup);
 
-    // Field Filter Input Group
+    // Query Button
+    const queryBtn = document.createElement("button");
+    queryBtn.textContent = "🔗 Query";
+    queryBtn.style.cssText = `padding:8px 12px;background:#8b5cf6;border:none;color:#fff;border-radius:4px;cursor:pointer;font-weight:bold;font-size:12px;height:fit-content`;
+    queryBtn.onclick = () => fetchLogsFromLoki(false);
+    row2.appendChild(queryBtn);
+
+    // Sort Button (move to row2)
+    const sortBtn = document.createElement("button");
+    sortBtn.textContent = `⬇️ ${STATE.sortOrder === "DESC" ? "Newest" : "Oldest"}`;
+    sortBtn.style.cssText = `padding:8px 12px;background:#10b981;border:none;color:#fff;border-radius:4px;cursor:pointer;font-weight:bold;font-size:12px;height:fit-content`;
+    sortBtn.onclick = toggleSortOrder;
+    row2.appendChild(sortBtn);
+
+    controls.appendChild(row2);
+
+    // ROW 3: Field Filter Input
+    const row3 = document.createElement("div");
+    row3.style.cssText = `display:flex;gap:10px;align-items:flex-end`;
+
     const fieldGroup = document.createElement('div');
-    fieldGroup.style.cssText = 'display:flex;flex-direction:column;gap:4px;min-width:150px';
+    fieldGroup.style.cssText = 'display:flex;flex-direction:column;gap:4px;flex:1;min-width:250px';
     
     const fieldLabel = document.createElement('label');
-    fieldLabel.textContent = 'Filter by Field';
+    fieldLabel.textContent = 'Filter by Field Name';
     fieldLabel.style.cssText = 'font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px';
     
     const fieldInput = document.createElement('input');
@@ -467,13 +491,9 @@
     fieldGroup.appendChild(fieldLabel);
     fieldGroup.appendChild(fieldInput);
     fieldGroup.appendChild(fieldHint);
-    controls.appendChild(fieldGroup);
+    row3.appendChild(fieldGroup);
 
-    const queryBtn = document.createElement("button");
-    queryBtn.textContent = "🔗 Query";
-    queryBtn.style.cssText = `padding:6px 12px;background:#8b5cf6;border:none;color:#fff;border-radius:4px;cursor:pointer;font-weight:bold;font-size:12px`;
-    queryBtn.onclick = () => fetchLogsFromLoki(false);
-    controls.appendChild(queryBtn);
+    controls.appendChild(row3);
 
     popup.appendChild(controls);
 
