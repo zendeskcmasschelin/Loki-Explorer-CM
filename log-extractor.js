@@ -449,13 +449,6 @@ const controls = document.createElement("div");
     queryBtn.onclick = () => fetchLogsFromLoki(false);
     row2.appendChild(queryBtn);
 
-    // Sort Button (move to row2)
-    const sortBtn = document.createElement("button");
-    sortBtn.textContent = `⬇️ ${STATE.sortOrder === "DESC" ? "Newest" : "Oldest"}`;
-    sortBtn.style.cssText = `padding:8px 12px;background:#10b981;border:none;color:#fff;border-radius:4px;cursor:pointer;font-weight:bold;font-size:12px;height:fit-content`;
-    sortBtn.onclick = toggleSortOrder;
-    row2.appendChild(sortBtn);
-
     controls.appendChild(row2);
 
     // ROW 3: Field Filter Input
@@ -494,6 +487,20 @@ const controls = document.createElement("div");
     row3.appendChild(fieldGroup);
 
     controls.appendChild(row3);
+
+    // ROW 4: Sort Button (alone)
+    const row4 = document.createElement("div");
+    row4.style.cssText = `display:flex;gap:10px;align-items:center`;
+
+    const sortBtn = document.createElement("button");
+    sortBtn.textContent = `⬇️ ${STATE.sortOrder === "DESC" ? "Newest" : "Oldest"}`;
+    sortBtn.style.cssText = `padding:10px 16px;background:#10b981;border:none;color:#fff;border-radius:4px;cursor:pointer;font-weight:bold;font-size:13px;transition:all 0.2s`;
+    sortBtn.onmouseover = () => { sortBtn.style.background = "#059669"; };
+    sortBtn.onmouseout = () => { sortBtn.style.background = "#10b981"; };
+    sortBtn.onclick = toggleSortOrder;
+    row4.appendChild(sortBtn);
+
+    controls.appendChild(row4);
 
     popup.appendChild(controls);
 
