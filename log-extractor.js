@@ -170,22 +170,50 @@
     return syntaxHighlight ? syntaxHighlight.textContent.trim() : "";
   }
 
-  function parseJsonFields(rawJson) {
+function parseJsonFields(rawJson) {
     const fields = {};
     if (!rawJson) return fields;
-    const patterns = {
-      conversationId: /"conversationId"\s*:\s*"([^"]+)"/,
-      appId: /"appId"\s*:\s*"([^"]+)"/,
-      accountSubdomain: /"accountSubdomain"\s*:\s*"([^"]+)"/,
-      userId: /"userId"\s*:\s*"([^"]+)"/,
-      accountId: /"accountId"\s*:\s*"([^"]+)"/,
-      requestId: /"requestId"\s*:\s*"([^"]+)"/,
-      correlationId: /"correlationId"\s*:\s*"([^"]+)"/
-    };
-    Object.entries(patterns).forEach(([key, regex]) => {
-      const match = rawJson.match(regex);
-      if (match) fields[key] = match[1];
-    });
+    
+    try {
+      // Try to parse the entire JSON
+      const parsed = JSON.parse(rawJson);
+      
+      // Extract all top-level keys
+      Object.keys(parsed).forEach(key => {
+        const value = parsed[key];
+        
+        // Only extract string values or simple types
+        if (typeof value === 'string') {
+          fields[key] = value;
+        } else if (typeof value === 'number') {
+          fields[key] = String(value);
+        } else if (typeof value === 'boolean') {
+          fields[key] = String(value);
+        }
+        // Skip nested objects and arrays
+      });
+    } catch (e) {
+      // If JSON parse fails, fall back to regex extraction
+      const patterns = {
+        conversationId: /"conversationId"\s*:\s*"([^"]+)"/,
+        appId: /"appId"\s*:\s*"([^"]+)"/,
+        accountSubdomain: /"accountSubdomain"\s*:\s*"([^"]+)"/,
+        userId: /"userId"\s*:\s*"([^"]+)"/,
+        accountId: /"accountId"\s*:\s*"([^"]+)"/,
+        requestId: /"requestId"\s*:\s*"([^"]+)"/,
+        correlationId: /"correlationId"\s*:\s*"([^"]+)"/,
+        externalId: /"externalId"\s*:\s*"([^"]+)"/,
+        integrationId: /"integrationId"\s*:\s*"([^"]+)"/,
+        appUserId: /"appUserId"\s*:\s*"([^"]+)"/,
+        host: /"host"\s*:\s*"([^"]+)"/
+      };
+      
+      Object.entries(patterns).forEach(([key, regex]) => {
+        const match = rawJson.match(regex);
+        if (match) fields[key] = match[1];
+      });
+    }
+    
     return fields;
   }
 
