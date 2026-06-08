@@ -9,7 +9,9 @@
     lastLogTimestamp: null,
     hasMoreLogs: true,
     timeRangeMinutes: 5,
-    sortOrder: "DESC"
+    sortOrder: "DESC",
+    fieldFilterName: null,        
+    fieldFilterValues: new Set() 
   };
 
   const STYLES = `
@@ -340,7 +342,7 @@
   }
 
   function applyFilters() {
-    STATE.filteredLogs = STATE.allLogs.filter(log => STATE.filters[log.level]);
+    applyFieldFilter();  // ⬅️ Use new function instead
   }
 
   function toggleFilter(level) {
@@ -435,6 +437,38 @@
     timeGroup.appendChild(timeHint);
     controls.appendChild(timeGroup);
 
+    // Field Filter Input Group
+    const fieldGroup = document.createElement('div');
+    fieldGroup.style.cssText = 'display:flex;flex-direction:column;gap:4px;min-width:150px';
+    
+    const fieldLabel = document.createElement('label');
+    fieldLabel.textContent = 'Filter by Field';
+    fieldLabel.style.cssText = 'font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px';
+    
+    const fieldInput = document.createElement('input');
+    fieldInput.id = 'field-filter-input';
+    fieldInput.className = 'query-input';
+    fieldInput.placeholder = 'e.g. conversationId';
+    fieldInput.value = STATE.fieldFilterName || '';
+    fieldInput.style.cssText = 'padding:8px 10px;background:#0f172a;border:1px solid #475569;color:#cbd5e1;border-radius:4px;font-family:"Monaco","Courier New",monospace;font-size:11px';
+    
+    const fieldHint = document.createElement('div');
+    fieldHint.textContent = 'Field name to filter logs';
+    fieldHint.style.cssText = 'font-size:10px;color:#64748b';
+    
+    fieldInput.addEventListener('input', (e) => {
+      const fieldName = e.target.value.trim() || null;
+      STATE.fieldFilterName = fieldName;
+      applyFilters();
+      renderLogList();
+      renderFieldValues();
+    });
+    
+    fieldGroup.appendChild(fieldLabel);
+    fieldGroup.appendChild(fieldInput);
+    fieldGroup.appendChild(fieldHint);
+    controls.appendChild(fieldGroup);
+
     const queryBtn = document.createElement("button");
     queryBtn.textContent = "🔗 Query";
     queryBtn.style.cssText = `padding:6px 12px;background:#8b5cf6;border:none;color:#fff;border-radius:4px;cursor:pointer;font-weight:bold;font-size:12px`;
@@ -463,6 +497,16 @@
     detailPanel.style.cssText = `flex:1;overflow-y:auto;background:#1e293b;padding:15px;max-height:100%`;
     detailPanel.innerHTML = `<p style="color:#64748b;font-size:12px">Select log</p>`;
     mainContent.appendChild(detailPanel);
+
+    popup.appendChild(mainContent);
+
+    // Field Values Container (NEW)
+    const fieldValuesContainer = document.createElement("div");
+    fieldValuesContainer.id = "field-values-container";
+    fieldValuesContainer.style.cssText = `background:#0f172a;padding:15px;border-top:1px solid #334155;max-height:120px;overflow-y:auto;display:none`;
+    popup.appendChild(fieldValuesContainer);
+
+    document.body.appendChild(popup);
 
     popup.appendChild(mainContent);
     document.body.appendChild(popup);
@@ -529,6 +573,8 @@
       loadMoreDiv.innerHTML = `<p style="margin:0 0 10px 0;color:#94a3b8;font-size:12px">📜 Scroll to load more</p><button class="load-more-button" onclick="window._grafanaLoadMore()">Load 200 More</button>`;
       logList.appendChild(loadMoreDiv);
     }
+
+    renderFieldValues(); 
   }
 
   window._grafanaLoadMore = () => { fetchLogsFromLoki(true); };
@@ -566,6 +612,48 @@
     const div = document.createElement("div");
     div.textContent = text;
     return div.innerHTML;
+  }
+
+  function extractUniqueFieldValues(fieldName) {
+    const values = new Set();
+    STATE.allLogs.forEach(log => {
+      if (log.fields[fieldName]) {
+        values.add(log.fields[fieldName]);
+      }
+    });
+    return Array.from(values).sort();
+  }
+
+  function applyFieldFilter() {
+    if (!STATE.fieldFilterName) {
+      STATE.filteredLogs = STATE.allLogs.filter(log => STATE.filters[log.level]);
+    } else {
+      STATE.filteredLogs = STATE.allLogs.filter(log => 
+        STATE.filters[log.level] && log.fields[STATE.fieldFilterName]
+      );
+    }
+    STATE.fieldFilterValues = extractUniqueFieldValues(STATE.fieldFilterName);
+  }
+
+  function renderFieldValues() {
+    const container = document.getElementById("field-values-container");
+    if (!container) return;
+
+    if (!STATE.fieldFilterName || STATE.fieldFilterValues.size === 0) {
+      container.style.display = "none";
+      return;
+    }
+
+    container.style.display = "block";
+    let html = `<div style="color:#0ea5e9;font-weight:bold;margin-bottom:8px">🔹 Values for "<strong>${STATE.fieldFilterName}</strong>" (${STATE.fieldFilterValues.size}):</div>`;
+    html += `<div style="display:flex;flex-wrap:wrap;gap:6px">`;
+    
+    STATE.fieldFilterValues.forEach(value => {
+      html += `<span style="background:#334155;color:#cbd5e1;padding:4px 10px;border-radius:3px;font-size:11px;cursor:pointer;border:1px solid #475569;transition:all 0.2s" title="${value}">${value.substring(0, 20)}${value.length > 20 ? '...' : ''}</span>`;
+    });
+    
+    html += `</div>`;
+    container.innerHTML = html;
   }
 
   injectStyles();
