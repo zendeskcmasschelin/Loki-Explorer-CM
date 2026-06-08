@@ -10,7 +10,8 @@
     hasMoreLogs: true,
     timeRangeMinutes: 5,
     sortOrder: "DESC",
-    fieldFilterName: null,        
+    fieldFilterName: null,
+    fieldFilterValue: null,   
     fieldFilterValues: new Set() 
   };
 
@@ -342,7 +343,7 @@
   }
 
   function applyFilters() {
-    applyFieldFilter();  // ⬅️ Use new function instead
+    applyFieldFilter();  
   }
 
   function toggleFilter(level) {
@@ -451,7 +452,7 @@ const controls = document.createElement("div");
 
     controls.appendChild(row2);
 
-    // ROW 3: Field Filter Input
+// ROW 3: Field Filter Input + Reset Button
     const row3 = document.createElement("div");
     row3.style.cssText = `display:flex;gap:10px;align-items:flex-end`;
 
@@ -476,6 +477,7 @@ const controls = document.createElement("div");
     fieldInput.addEventListener('input', (e) => {
       const fieldName = e.target.value.trim() || null;
       STATE.fieldFilterName = fieldName;
+      STATE.fieldFilterValue = null;  // ⬅️ Reset value when field changes
       applyFilters();
       renderLogList();
       renderFieldValues();
@@ -485,6 +487,22 @@ const controls = document.createElement("div");
     fieldGroup.appendChild(fieldInput);
     fieldGroup.appendChild(fieldHint);
     row3.appendChild(fieldGroup);
+
+    // Reset Button
+    const resetFieldBtn = document.createElement("button");
+    resetFieldBtn.textContent = "🔄 Reset";
+    resetFieldBtn.style.cssText = `padding:8px 14px;background:#f59e0b;border:none;color:#fff;border-radius:4px;cursor:pointer;font-weight:bold;font-size:12px;height:fit-content;transition:all 0.2s`;
+    resetFieldBtn.onmouseover = () => { resetFieldBtn.style.background = "#d97706"; };
+    resetFieldBtn.onmouseout = () => { resetFieldBtn.style.background = "#f59e0b"; };
+    resetFieldBtn.onclick = () => {
+      STATE.fieldFilterName = null;
+      STATE.fieldFilterValue = null;
+      fieldInput.value = '';
+      applyFilters();
+      renderLogList();
+      renderFieldValues();
+    };
+    row3.appendChild(resetFieldBtn);
 
     controls.appendChild(row3);
 
@@ -650,10 +668,17 @@ const controls = document.createElement("div");
     return Array.from(values).sort();
   }
 
-  function applyFieldFilter() {
+function applyFieldFilter() {
     if (!STATE.fieldFilterName) {
       STATE.filteredLogs = STATE.allLogs.filter(log => STATE.filters[log.level]);
+    } else if (STATE.fieldFilterValue) {
+      // Filter by both field name AND specific value
+      STATE.filteredLogs = STATE.allLogs.filter(log => 
+        STATE.filters[log.level] && 
+        log.fields[STATE.fieldFilterName] === STATE.fieldFilterValue
+      );
     } else {
+      // Filter by field name only (any value)
       STATE.filteredLogs = STATE.allLogs.filter(log => 
         STATE.filters[log.level] && log.fields[STATE.fieldFilterName]
       );
@@ -661,26 +686,45 @@ const controls = document.createElement("div");
     STATE.fieldFilterValues = extractUniqueFieldValues(STATE.fieldFilterName);
   }
 
-  function renderFieldValues() {
+function renderFieldValues() {
     const container = document.getElementById("field-values-container");
     if (!container) return;
 
-    if (!STATE.fieldFilterName || STATE.fieldFilterValues.size === 0) {
+    if (!STATE.fieldFilterName || STATE.fieldFilterValues.length === 0) {
       container.style.display = "none";
       return;
     }
 
     container.style.display = "block";
-    let html = `<div style="color:#0ea5e9;font-weight:bold;margin-bottom:8px">🔹 Values for "<strong>${STATE.fieldFilterName}</strong>" (${STATE.fieldFilterValues.size}):</div>`;
+    let html = `<div style="color:#0ea5e9;font-weight:bold;margin-bottom:10px">🔹 Values for "<strong>${STATE.fieldFilterName}</strong>" (${STATE.fieldFilterValues.length}):</div>`;
     html += `<div style="display:flex;flex-wrap:wrap;gap:6px">`;
     
     STATE.fieldFilterValues.forEach(value => {
-      html += `<span style="background:#334155;color:#cbd5e1;padding:4px 10px;border-radius:3px;font-size:11px;cursor:pointer;border:1px solid #475569;transition:all 0.2s" title="${value}">${value.substring(0, 20)}${value.length > 20 ? '...' : ''}</span>`;
+      const isSelected = STATE.fieldFilterValue === value;
+      const bgColor = isSelected ? "#0ea5e9" : "#334155";
+      const textColor = isSelected ? "#000" : "#cbd5e1";
+      const borderColor = isSelected ? "#0ea5e9" : "#475569";
+      
+      html += `<span 
+        onclick="window._selectFieldValue('${value.replace(/'/g, "\\'")}'); window._updateFieldFilter();"
+        style="background:${bgColor};color:${textColor};padding:6px 12px;border-radius:4px;font-size:11px;cursor:pointer;border:1px solid ${borderColor};transition:all 0.2s;font-weight:${isSelected ? 'bold' : 'normal'}" 
+        title="${value}"
+      >${value.substring(0, 25)}${value.length > 25 ? '...' : ''}</span>`;
     });
     
     html += `</div>`;
     container.innerHTML = html;
   }
+
+  window._selectFieldValue = (value) => {
+    STATE.fieldFilterValue = value;
+  };
+
+  window._updateFieldFilter = () => {
+    applyFilters();
+    renderLogList();
+    renderFieldValues();
+  };
 
   injectStyles();
   extractLogsFromDOM();
