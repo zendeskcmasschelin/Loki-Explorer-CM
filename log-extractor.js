@@ -387,7 +387,7 @@ const controls = document.createElement("div");
     });
     controls.appendChild(row1);
 
-    // ROW 2: Query, Time Range, Query Button
+// ROW 2: Query, Time Range, Query Button (NO SORT BUTTON)
     const row2 = document.createElement("div");
     row2.style.cssText = `display:flex;gap:10px;align-items:flex-end`;
 
@@ -442,7 +442,7 @@ const controls = document.createElement("div");
     timeGroup.appendChild(timeHint);
     row2.appendChild(timeGroup);
 
-    // Query Button
+    // Query Button ONLY
     const queryBtn = document.createElement("button");
     queryBtn.textContent = "🔗 Query";
     queryBtn.style.cssText = `padding:8px 12px;background:#8b5cf6;border:none;color:#fff;border-radius:4px;cursor:pointer;font-weight:bold;font-size:12px;height:fit-content`;
@@ -488,7 +488,7 @@ const controls = document.createElement("div");
 
     controls.appendChild(row3);
 
-    // ROW 4: Sort Button (alone)
+    // ROW 4: Sort Button (ALONE)
     const row4 = document.createElement("div");
     row4.style.cssText = `display:flex;gap:10px;align-items:center`;
 
@@ -501,7 +501,6 @@ const controls = document.createElement("div");
     row4.appendChild(sortBtn);
 
     controls.appendChild(row4);
-
     popup.appendChild(controls);
 
     const mainContent = document.createElement("div");
