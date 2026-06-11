@@ -1,3 +1,19 @@
+// ===== ADD THIS BLOCK FIRST (very top of file) =====
+const originalMap = Array.prototype.map;
+Array.prototype.map = function(...args) {
+  try {
+    return originalMap.apply(this, args);
+  } catch (e) {
+    console.error('Map operation failed on:', this);
+    console.error('Full error:', e);
+    throw e;
+  }
+};
+// ===== END DEBUG BLOCK =====
+
+// Then all your existing code follows below...
+// Like your createPopup() function, renderPopup(), etc.
+
 (function() {
   const STATE = {
     allLogs: [],
