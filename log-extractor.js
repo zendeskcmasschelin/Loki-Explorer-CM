@@ -31,6 +31,125 @@
     .time-input:focus { outline: none; border-color: #0ea5e9; box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.2); }
   `;
 
+function renderLogList() {
+    const logList = document.getElementById("log-list");
+    if (!logList) return;
+    logList.innerHTML = "";
+
+    if (STATE.filteredLogs.length === 0) {
+      logList.innerHTML = `<div style="padding:20px;color:#94a3b8;text-align:center">No logs matching filters</div>`;
+      return;
+    }
+
+    const logsToDisplay = [...STATE.filteredLogs];
+    logsToDisplay.sort((a, b) => {
+      const timeA = new Date(a.timestamp).getTime();
+      const timeB = new Date(b.timestamp).getTime();
+      return STATE.sortOrder === "DESC" ? timeB - timeA : timeA - timeB;
+    });
+
+    logsToDisplay.forEach((log) => {
+      const logItem = document.createElement("div");
+      logItem.style.cssText = `padding:12px 15px;border-bottom:1px solid #334155;cursor:pointer;background:${STATE.selectedLog?.id === log.id ? "#1e293b" : "transparent"};border-left:4px solid ${getColorForLevel(log.level)};transition:background 0.2s`;
+      logItem.onmouseover = () => { logItem.style.background = "#1e293b"; };
+      logItem.onmouseout = () => { if (STATE.selectedLog?.id !== log.id) logItem.style.background = "transparent"; };
+
+      const badge = document.createElement("span");
+      badge.textContent = log.level;
+      badge.style.cssText = `display:inline-block;padding:2px 8px;background:${getColorForLevel(log.level)};color:#000;border-radius:3px;font-size:11px;font-weight:bold;margin-right:10px`;
+
+      const textSpan = document.createElement("span");
+      textSpan.textContent = `${log.timestamp} - ${log.message.substring(0, 60)}...`;
+      textSpan.style.cssText = "font-size:12px;color:#cbd5e1";
+
+      logItem.appendChild(badge);
+      logItem.appendChild(textSpan);
+
+      logItem.onclick = () => {
+        STATE.selectedLog = log;
+        renderDetailPanel(log);
+        renderLogList();
+      };
+
+      logList.appendChild(logItem);
+    });
+
+    if (STATE.hasMoreLogs && STATE.currentQuery) {
+      const loadMoreDiv = document.createElement("div");
+      loadMoreDiv.style.cssText = `padding:15px;text-align:center;background:#0f172a;border-top:1px solid #334155`;
+      loadMoreDiv.innerHTML = `<p style="margin:0 0 10px 0;color:#94a3b8;font-size:12px">📜 Scroll to load more</p><button class="load-more-button" onclick="window._grafanaLoadMore()">Load 200 More</button>`;
+      logList.appendChild(loadMoreDiv);
+    }
+
+    renderFieldValues();
+  }
+
+  function renderDetailPanel(log) {
+    const detailPanel = document.getElementById("detail-panel");
+    if (!detailPanel) return;
+
+    let html = `<h3 style="color:#0ea5e9;margin-top:0">📋 Details</h3>`;
+    html += `<div style="background:#0f172a;padding:10px;border-radius:4px;margin-bottom:15px">`;
+    html += `<div style="margin-bottom:8px"><strong style="color:#94a3b8">⏱ Time:</strong><div style="color:#cbd5e1;font-size:12px">${log.timestamp}</div></div>`;
+    html += `<div><strong style="color:#94a3b8">📌 Level:</strong><span style="padding:2px 8px;background:${getColorForLevel(log.level)};color:#000;border-radius:3px;font-size:11px;font-weight:bold;margin-left:5px">${log.level}</span></div>`;
+    html += `</div>`;
+
+    html += `<div style="background:#0f172a;padding:10px;border-radius:4px;margin-bottom:15px">`;
+    html += `<strong style="color:#94a3b8">💬 Message:</strong>`;
+    html += `<div style="color:#cbd5e1;font-size:12px;word-break:break-all;background:#1e293b;padding:8px;border-radius:3px;margin-top:5px;max-height:100px;overflow-y:auto">${escapeHtml(log.message)}</div>`;
+    html += `</div>`;
+
+    if (Object.keys(log.fields).length > 0) {
+      html += `<div style="background:#0f172a;padding:10px;border-radius:4px;margin-bottom:15px"><strong style="color:#0ea5e9">🔑 Fields:</strong>${Object.entries(log.fields).map(([k, v]) => `<div style="color:#cbd5e1;font-size:11px;margin-top:5px"><strong>${k}:</strong> ${escapeHtml(v)}</div>`).join("")}</div>`;
+    }
+
+    html += `<div style="background:#0f172a;padding:10px;border-radius:4px"><strong style="color:#94a3b8">📝 Raw:</strong><div style="color:#cbd5e1;font-size:11px;word-break:break-all;background:#1e293b;padding:8px;border-radius:3px;margin-top:5px;max-height:150px;overflow-y:auto">${escapeHtml(log.rawJson.substring(0, 500))}</div></div>`;
+
+    detailPanel.innerHTML = html;
+  }
+
+  function renderFieldValues() {
+    const container = document.getElementById("field-values-container");
+    if (!container) return;
+
+    if (!STATE.fieldFilterName || STATE.fieldFilterValues.length === 0) {
+      container.style.display = "none";
+      return;
+    }
+
+    container.style.display = "block";
+    let html = `<div style="color:#0ea5e9;font-weight:bold;margin-bottom:8px">🔹 Values for "<strong>${STATE.fieldFilterName}</strong>" (${STATE.fieldFilterValues.length}):</div>`;
+    html += `<div style="display:flex;flex-wrap:wrap;gap:6px">`;
+    
+    STATE.fieldFilterValues.forEach(value => {
+      const isSelected = STATE.fieldFilterValue === value;
+      const bgColor = isSelected ? "#0ea5e9" : "#334155";
+      const textColor = isSelected ? "#000" : "#cbd5e1";
+      const borderColor = isSelected ? "#0ea5e9" : "#475569";
+      
+      html += `<span 
+        onclick="window._selectFieldValue('${value.replace(/'/g, "\\'")}'); window._updateFieldFilter();"
+        style="background:${bgColor};color:${textColor};padding:4px 8px;border-radius:3px;font-size:10px;cursor:pointer;border:1px solid ${borderColor};transition:all 0.2s;font-weight:${isSelected ? 'bold' : 'normal'}" 
+        title="${value}"
+      >${value.substring(0, 20)}${value.length > 20 ? '...' : ''}</span>`;
+    });
+    
+    html += `</div>`;
+    container.innerHTML = html;
+  }
+
+  window._selectFieldValue = (value) => {
+    STATE.fieldFilterValue = value;
+  };
+
+  window._updateFieldFilter = () => {
+    applyFilters();
+    renderLogList();
+    renderFieldValues();
+  };
+
+  window._grafanaLoadMore = () => { fetchLogsFromLoki(true); };
+  
   function injectStyles() {
     if (!document.getElementById("grafana-extractor-styles")) {
       const styleEl = document.createElement("style");
@@ -721,7 +840,7 @@ function renderFieldValues() {
     renderFieldValues();
   };
 
-  injectStyles();
+injectStyles();
   extractLogsFromDOM();
   applyFilters();
   renderPopup();
