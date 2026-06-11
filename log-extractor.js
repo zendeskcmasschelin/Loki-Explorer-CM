@@ -409,11 +409,20 @@ if (!isLoadMore) {
 
 let start, end;
 
-    if (!isLoadMore) {
+if (!isLoadMore) {
       const startDateInput = document.getElementById("loki-start-date");
       const endDateInput = document.getElementById("loki-end-date");
-      const startDate = new Date(startDateInput.value);
-      const endDate = new Date(endDateInput.value);
+      const startMsInput = document.getElementById("loki-start-ms");
+      const endMsInput = document.getElementById("loki-end-ms");
+      
+      let startDate = new Date(startDateInput.value);
+      let endDate = new Date(endDateInput.value);
+      
+      const startMs = parseInt(startMsInput.value) || 0;
+      const endMs = parseInt(endMsInput.value) || 0;
+      
+      startDate.setMilliseconds(startMs);
+      endDate.setMilliseconds(endMs);
       
       start = Math.floor(startDate.getTime() * 1_000_000);
       end = Math.floor(endDate.getTime() * 1_000_000);
@@ -583,30 +592,39 @@ function renderPopup() {
     };
     leftPanel.appendChild(switchboardBtn);
 
-    // Date Range Section
+// Date Range Section
     const dateLabel = document.createElement('label');
     dateLabel.textContent = '📅 Date Range';
     dateLabel.style.cssText = 'font-size:9px;font-weight:600;color:#94a3b8;text-transform:uppercase;margin-top:10px;margin-bottom:4px';
     leftPanel.appendChild(dateLabel);
 
-    // Helper function to format dates
+    // Helper function to format dates with seconds and milliseconds
     const formatDateForInput = (date) => {
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const day = String(date.getDate()).padStart(2, '0');
       const hours = String(date.getHours()).padStart(2, '0');
       const minutes = String(date.getMinutes()).padStart(2, '0');
-      return `${year}-${month}-${day}T${hours}:${minutes}`;
+      const seconds = String(date.getSeconds()).padStart(2, '0');
+      return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
     };
 
-    // Preset Dropdown
+    // Predefined label
+    const predefLabel = document.createElement('label');
+    predefLabel.textContent = 'Predefined:';
+    predefLabel.style.cssText = 'font-size:8px;font-weight:600;color:#94a3b8;margin-top:6px';
+    leftPanel.appendChild(predefLabel);
+
+    // Preset Dropdown (with larger height)
     const presetSelect = document.createElement("select");
     presetSelect.id = "date-preset-select";
-    presetSelect.style.cssText = 'padding:6px 8px;background:#0f172a;border:1px solid #475569;color:#cbd5e1;border-radius:3px;font-family:Monaco,monospace;font-size:9px;width:100%;margin-bottom:6px;cursor:pointer';
+    presetSelect.size = 6;  // ⬅️ Shows 6 options at once (doubled from default)
+    presetSelect.style.cssText = 'padding:6px 8px;background:#0f172a;border:1px solid #475569;color:#cbd5e1;border-radius:3px;font-family:Monaco,monospace;font-size:9px;width:100%;margin-bottom:6px;cursor:pointer;overflow-y:auto';
     
     const presets = [
       { label: 'Last 5 minutes', minutes: 5 },
       { label: 'Last 15 minutes', minutes: 15 },
+      { label: 'Last 30 minutes', minutes: 30 },
       { label: 'Last 1 hour', minutes: 60 },
       { label: 'Last 4 hours', minutes: 240 },
       { label: 'Last 1 day', minutes: 1440 }
@@ -624,7 +642,7 @@ function renderPopup() {
     // Start Date
     const startDateLabel = document.createElement('label');
     startDateLabel.textContent = 'Start:';
-    startDateLabel.style.cssText = 'font-size:8px;font-weight:600;color:#94a3b8;margin-top:4px';
+    startDateLabel.style.cssText = 'font-size:8px;font-weight:600;color:#94a3b8;margin-top:6px';
     leftPanel.appendChild(startDateLabel);
 
     const startDateInput = document.createElement("input");
@@ -633,21 +651,53 @@ function renderPopup() {
     const now = new Date();
     const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
     startDateInput.value = formatDateForInput(fiveMinutesAgo);
-    startDateInput.style.cssText = 'padding:6px 8px;background:#0f172a;border:1px solid #475569;color:#cbd5e1;border-radius:3px;font-family:Monaco,monospace;font-size:9px;width:100%;margin-bottom:6px;cursor:pointer';
+    startDateInput.style.cssText = 'padding:6px 8px;background:#0f172a;border:1px solid #475569;color:#cbd5e1;border-radius:3px;font-family:Monaco,monospace;font-size:9px;width:100%;margin-bottom:4px;cursor:pointer';
     leftPanel.appendChild(startDateInput);
+
+    // Start Milliseconds
+    const startMsLabel = document.createElement('label');
+    startMsLabel.textContent = 'Start MS:';
+    startMsLabel.style.cssText = 'font-size:8px;font-weight:600;color:#94a3b8';
+    leftPanel.appendChild(startMsLabel);
+
+    const startMsInput = document.createElement("input");
+    startMsInput.id = "loki-start-ms";
+    startMsInput.type = "number";
+    startMsInput.min = "0";
+    startMsInput.max = "999";
+    startMsInput.placeholder = "0";
+    startMsInput.value = String(fiveMinutesAgo.getMilliseconds());
+    startMsInput.style.cssText = 'padding:6px 8px;background:#0f172a;border:1px solid #475569;color:#cbd5e1;border-radius:3px;font-family:Monaco,monospace;font-size:9px;width:100%;margin-bottom:6px;cursor:pointer';
+    leftPanel.appendChild(startMsInput);
 
     // End Date
     const endDateLabel = document.createElement('label');
     endDateLabel.textContent = 'End:';
-    endDateLabel.style.cssText = 'font-size:8px;font-weight:600;color:#94a3b8;margin-top:4px';
+    endDateLabel.style.cssText = 'font-size:8px;font-weight:600;color:#94a3b8;margin-top:6px';
     leftPanel.appendChild(endDateLabel);
 
     const endDateInput = document.createElement("input");
     endDateInput.id = "loki-end-date";
     endDateInput.type = "datetime-local";
     endDateInput.value = formatDateForInput(now);
-    endDateInput.style.cssText = 'padding:6px 8px;background:#0f172a;border:1px solid #475569;color:#cbd5e1;border-radius:3px;font-family:Monaco,monospace;font-size:9px;width:100%;margin-bottom:6px;cursor:pointer';
+    endDateInput.style.cssText = 'padding:6px 8px;background:#0f172a;border:1px solid #475569;color:#cbd5e1;border-radius:3px;font-family:Monaco,monospace;font-size:9px;width:100%;margin-bottom:4px;cursor:pointer';
     leftPanel.appendChild(endDateInput);
+
+    // End Milliseconds
+    const endMsLabel = document.createElement('label');
+    endMsLabel.textContent = 'End MS:';
+    endMsLabel.style.cssText = 'font-size:8px;font-weight:600;color:#94a3b8';
+    leftPanel.appendChild(endMsLabel);
+
+    const endMsInput = document.createElement("input");
+    endMsInput.id = "loki-end-ms";
+    endMsInput.type = "number";
+    endMsInput.min = "0";
+    endMsInput.max = "999";
+    endMsInput.placeholder = "0";
+    endMsInput.value = String(now.getMilliseconds());
+    endMsInput.style.cssText = 'padding:6px 8px;background:#0f172a;border:1px solid #475569;color:#cbd5e1;border-radius:3px;font-family:Monaco,monospace;font-size:9px;width:100%;margin-bottom:6px;cursor:pointer';
+    leftPanel.appendChild(endMsInput);
 
     // Update dates when preset changes
     presetSelect.addEventListener("change", (e) => {
@@ -655,7 +705,9 @@ function renderPopup() {
       const nowDate = new Date();
       const startDate = new Date(nowDate.getTime() - minutes * 60 * 1000);
       startDateInput.value = formatDateForInput(startDate);
+      startMsInput.value = String(startDate.getMilliseconds());
       endDateInput.value = formatDateForInput(nowDate);
+      endMsInput.value = String(nowDate.getMilliseconds());
     });
 
     // Fetch Button
