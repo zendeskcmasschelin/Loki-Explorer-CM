@@ -515,6 +515,7 @@ async function fetchLogsFromLoki(isLoadMore = false) {
       hideLoading();
       applyFilters();
       renderLogList();
+      updateFilterButtons();
     } catch (err) {
       clearTimeout(timeout);
       hideLoading();
@@ -924,15 +925,20 @@ function renderPopup() {
     detailPanel.innerHTML = html;
   }
 
-  function updateFilterButtons() {
-    ["INFO", "WARN", "ERROR"].forEach(level => {
-      const btn = document.getElementById(`filter-${level}`);
-      if (btn) {
-        btn.style.borderColor = STATE.filters[level] ? getColorForLevel(level) : "#475569";
-        btn.style.background = STATE.filters[level] ? getColorForLevel(level) + "20" : "#1e293b";
-      }
-    });
-  }
+function updateFilterButtons() {
+  ["INFO", "WARN", "ERROR"].forEach(level => {
+    const btn = document.getElementById(`filter-${level}`);
+    if (btn) {
+      // Update COUNT
+      const count = STATE.allLogs.filter(l => l.level === level).length;
+      btn.textContent = `${level} (${count})`;
+      
+      // Update styling
+      btn.style.borderColor = STATE.filters[level] ? getColorForLevel(level) : "#475569";
+      btn.style.background = STATE.filters[level] ? getColorForLevel(level) + "20" : "#1e293b";
+    }
+  });
+}
 
   function getColorForLevel(level) {
     return { ERROR: "#ef4444", WARN: "#f59e0b", INFO: "#3b82f6" }[level] || "#6b7280";
