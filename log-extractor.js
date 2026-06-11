@@ -485,7 +485,7 @@ async function fetchLogsFromLoki(isLoadMore = false) {
 
       hideLoading();
       applyFilters();
-      renderPopup();
+      renderLogList();
     } catch (err) {
       clearTimeout(timeout);
       hideLoading();
