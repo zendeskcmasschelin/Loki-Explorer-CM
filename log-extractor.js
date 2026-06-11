@@ -349,7 +349,7 @@ function parseJsonFields(rawJson) {
 
       hideLoading();
       applyFilters();
-      renderPopup();
+      ;
     } catch (err) {
       clearTimeout(timeout);
       hideLoading();
@@ -392,7 +392,7 @@ function renderPopup() {
 
     const popup = document.createElement("div");
     popup.id = "grafana-log-extractor-popup";
-    popup.style.cssText = `position:fixed;top:50px;right:20px;width:1200px;max-height:90vh;background:#1e1e1e;border:2px solid #0ea5e9;border-radius:8px;box-shadow:0 10px 40px rgba(0,0,0,0.5);z-index:99999;font-family:Monaco,monospace;color:#e0e0e0;display:flex;flex-direction:column;overflow:hidden`;
+    popup.style.cssText = `position:fixed;top:50px;right:20px;width:1300px;max-height:90vh;background:#1e1e1e;border:2px solid #0ea5e9;border-radius:8px;box-shadow:0 10px 40px rgba(0,0,0,0.5);z-index:99999;font-family:Monaco,monospace;color:#e0e0e0;display:flex;flex-direction:column;overflow:hidden`;
 
     // HEADER
     const header = document.createElement("div");
@@ -400,11 +400,80 @@ function renderPopup() {
     header.innerHTML = `<div><h2 style="margin:0;font-size:18px;color:#0ea5e9">📊 Logs</h2><p style="margin:5px 0 0 0;font-size:12px;color:#94a3b8">Total: ${STATE.allLogs.length} | Shown: ${STATE.filteredLogs.length}</p></div><button id="close-popup" style="padding:6px 12px;background:#ef4444;border:none;border-radius:4px;color:#fff;cursor:pointer;font-weight:bold">Close</button>`;
     popup.appendChild(header);
 
-    // MAIN CONTENT (left=logs, right=controls+details)
+    // MAIN CONTENT (left=controls, middle=logs, right=details)
     const mainContent = document.createElement("div");
     mainContent.style.cssText = `display:flex;flex:1;overflow:hidden;gap:0;background:#334155;position:relative`;
 
-    // LEFT: Log List
+    // LEFT PANEL: Controls Sidebar
+    const leftPanel = document.createElement("div");
+    leftPanel.style.cssText = `width:280px;background:#0f172a;padding:12px;border-right:1px solid #334155;overflow-y:auto;display:flex;flex-direction:column;gap:10px;max-height:100%`;
+
+    // Filter Buttons Section
+    const filterLabel = document.createElement("div");
+    filterLabel.textContent = "📌 Filters";
+    filterLabel.style.cssText = 'font-size:10px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px';
+    leftPanel.appendChild(filterLabel);
+
+    const filterBtnsRow = document.createElement("div");
+    filterBtnsRow.style.cssText = `display:flex;gap:4px;flex-wrap:wrap`;
+    
+    ["INFO", "WARN", "ERROR"].forEach(level => {
+      const btn = document.createElement("button");
+      btn.id = `filter-${level}`;
+      btn.textContent = `$${level} ($${STATE.allLogs.filter(l => l.level === level).length})`;
+      btn.style.cssText = `padding:4px 8px;border:2px solid $${STATE.filters[level] ? getColorForLevel(level) : "#475569"};background:$${STATE.filters[level] ? getColorForLevel(level) + "20" : "#1e293b"};color:${getColorForLevel(level)};border-radius:3px;cursor:pointer;font-weight:bold;font-size:9px;flex:1;min-width:50px;transition:all 0.2s`;
+      btn.onclick = () => toggleFilter(level);
+      filterBtnsRow.appendChild(btn);
+    });
+    leftPanel.appendChild(filterBtnsRow);
+
+    // Sort Button
+    const sortBtn = document.createElement("button");
+    sortBtn.textContent = `${STATE.sortOrder === "DESC" ? "⬇️ Newest" : "⬆️ Oldest"}`;
+    sortBtn.style.cssText = `padding:8px 10px;background:#10b981;border:none;color:#fff;border-radius:3px;cursor:pointer;font-weight:bold;font-size:10px;transition:all 0.2s;width:100%;margin-top:6px`;
+    sortBtn.onmouseover = () => { sortBtn.style.background = "#059669"; };
+    sortBtn.onmouseout = () => { sortBtn.style.background = "#10b981"; };
+    sortBtn.onclick = toggleSortOrder;
+    leftPanel.appendChild(sortBtn);
+
+    // Query Input Section
+    const queryLabel = document.createElement('label');
+    queryLabel.textContent = '🔗 LogQL Query';
+    queryLabel.style.cssText = 'font-size:9px;font-weight:600;color:#94a3b8;text-transform:uppercase;margin-top:10px;margin-bottom:4px';
+    leftPanel.appendChild(queryLabel);
+
+    const queryInput = document.createElement("input");
+    queryInput.id = "loki-query-input";
+    queryInput.placeholder = '{job="grafana"}';
+    queryInput.value = parseUrlForQuery() || '{service_name="sunco"}';
+    queryInput.style.cssText = 'padding:6px 8px;background:#0f172a;border:1px solid #475569;color:#cbd5e1;border-radius:3px;font-family:Monaco,monospace;font-size:9px;width:100%';
+    leftPanel.appendChild(queryInput);
+
+    // Time Input Section
+    const timeLabel = document.createElement('label');
+    timeLabel.textContent = '⏱ Time Range (Min)';
+    timeLabel.style.cssText = 'font-size:9px;font-weight:600;color:#94a3b8;text-transform:uppercase;margin-top:8px;margin-bottom:4px';
+    leftPanel.appendChild(timeLabel);
+
+    const timeInput = document.createElement("input");
+    timeInput.id = "loki-time-input";
+    timeInput.type = "number";
+    timeInput.placeholder = '5';
+    timeInput.value = parseUrlForTimeRange();
+    timeInput.min = "1";
+    timeInput.max = "1440";
+    timeInput.style.cssText = 'padding:6px 8px;background:#0f172a;border:1px solid #475569;color:#cbd5e1;border-radius:3px;font-family:Monaco,monospace;font-size:9px;width:100%';
+    leftPanel.appendChild(timeInput);
+
+    // Fetch Button
+    const queryBtn = document.createElement("button");
+    queryBtn.textContent = "🔍 Fetch Logs";
+    queryBtn.style.cssText = `padding:8px 10px;background:#8b5cf6;border:none;color:#fff;border-radius:3px;cursor:pointer;font-weight:bold;font-size:10px;width:100%;margin-top:6px;transition:all 0.2s`;
+    queryBtn.onmouseover = () => { queryBtn.style.background = "#7c3aed"; };
+    queryBtn.onmouseout = () => { queryBtn.style.background = "#8b5cf6"; };
+    queryBtn.onclick = () => fetch
+
+    // MIDDLE: Log List
     const logList = document.createElement("div");
     logList.id = "log-list";
     logList.style.cssText = `flex:1;overflow-y:auto;background:#0f172a;border-right:1px solid #334155;max-height:100%;min-width:500px`;
@@ -417,132 +486,21 @@ function renderPopup() {
     });
     mainContent.appendChild(logList);
 
-    // RIGHT PANEL (controls on top, details below)
+    // RIGHT PANEL: Details
     const rightPanel = document.createElement("div");
-    rightPanel.style.cssText = `display:flex;flex-direction:column;width:350px;background:#0f172a;overflow:hidden;border-left:1px solid #334155`;
+    rightPanel.style.cssText = `width:350px;background:#1e293b;padding:12px;border-left:1px solid #334155;overflow-y:auto;display:flex;flex-direction:column;gap:10px;max-height:100%`;
 
-    // RIGHT TOP: Controls (scrollable)
-    const controls = document.createElement("div");
-    controls.style.cssText = `background:#0f172a;padding:12px;border-bottom:1px solid #334155;display:flex;flex-direction:column;gap:10px;overflow-y:auto;max-height:45%;min-height:180px`;
-
-    // Filter Buttons
-    const filterLabel = document.createElement("div");
-    filterLabel.textContent = "📌 Filters";
-    filterLabel.style.cssText = 'font-size:10px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px';
-    controls.appendChild(filterLabel);
-
-    const filterBtnsRow = document.createElement("div");
-    filterBtnsRow.style.cssText = `display:flex;gap:4px;flex-wrap:wrap`;
-    
-    ["INFO", "WARN", "ERROR"].forEach(level => {
-      const btn = document.createElement("button");
-      btn.id = `filter-${level}`;
-      btn.textContent = `${level} (${STATE.allLogs.filter(l => l.level === level).length})`;
-      btn.style.cssText = `padding:4px 8px;border:2px solid ${STATE.filters[level] ? getColorForLevel(level) : "#475569"};background:${STATE.filters[level] ? getColorForLevel(level) + "20" : "#1e293b"};color:${getColorForLevel(level)};border-radius:3px;cursor:pointer;font-weight:bold;font-size:9px;flex:1;min-width:50px;transition:all 0.2s`;
-      btn.onclick = () => toggleFilter(level);
-      filterBtnsRow.appendChild(btn);
-    });
-    controls.appendChild(filterBtnsRow);
-
-    // Sort Button
-    const sortBtn = document.createElement("button");
-    sortBtn.textContent = `${STATE.sortOrder === "DESC" ? "⬇️ Newest" : "⬆️ Oldest"}`;
-    sortBtn.style.cssText = `padding:6px 10px;background:#10b981;border:none;color:#fff;border-radius:3px;cursor:pointer;font-weight:bold;font-size:10px;transition:all 0.2s;width:100%;margin-top:6px`;
-    sortBtn.onmouseover = () => { sortBtn.style.background = "#059669"; };
-    sortBtn.onmouseout = () => { sortBtn.style.background = "#10b981"; };
-    sortBtn.onclick = toggleSortOrder;
-    controls.appendChild(sortBtn);
-
-    // Query Input
-    const queryLabel = document.createElement('label');
-    queryLabel.textContent = '🔗 LogQL';
-    queryLabel.style.cssText = 'font-size:9px;font-weight:600;color:#94a3b8;text-transform:uppercase;margin-top:8px';
-    controls.appendChild(queryLabel);
-
-    const queryInput = document.createElement("input");
-    queryInput.id = "loki-query-input";
-    queryInput.placeholder = '{job="grafana"}';
-    queryInput.value = parseUrlForQuery() || '{service_name="sunco"}';
-    queryInput.style.cssText = 'padding:6px 8px;background:#0f172a;border:1px solid #475569;color:#cbd5e1;border-radius:3px;font-family:Monaco,monospace;font-size:9px;width:100%';
-    controls.appendChild(queryInput);
-
-    // Time Input
-    const timeLabel = document.createElement('label');
-    timeLabel.textContent = '⏱ Minutes';
-    timeLabel.style.cssText = 'font-size:9px;font-weight:600;color:#94a3b8;text-transform:uppercase;margin-top:6px';
-    controls.appendChild(timeLabel);
-
-    const timeInput = document.createElement("input");
-    timeInput.id = "loki-time-input";
-    timeInput.type = "number";
-    timeInput.placeholder = '5';
-    timeInput.value = parseUrlForTimeRange();
-    timeInput.min = "1";
-    timeInput.max = "1440";
-    timeInput.style.cssText = 'padding:6px 8px;background:#0f172a;border:1px solid #475569;color:#cbd5e1;border-radius:3px;font-family:Monaco,monospace;font-size:9px;width:100%';
-    controls.appendChild(timeInput);
-
-    // Query Button
-    const queryBtn = document.createElement("button");
-    queryBtn.textContent = "🔍 Fetch";
-    queryBtn.style.cssText = `padding:6px 10px;background:#8b5cf6;border:none;color:#fff;border-radius:3px;cursor:pointer;font-weight:bold;font-size:10px;width:100%;margin-top:6px;transition:all 0.2s`;
-    queryBtn.onmouseover = () => { queryBtn.style.background = "#7c3aed"; };
-    queryBtn.onmouseout = () => { queryBtn.style.background = "#8b5cf6"; };
-    queryBtn.onclick = () => fetchLogsFromLoki(false);
-    controls.appendChild(queryBtn);
-
-    // Field Filter
-    const fieldLabel = document.createElement('label');
-    fieldLabel.textContent = '🔎 Field Name';
-    fieldLabel.style.cssText = 'font-size:9px;font-weight:600;color:#94a3b8;text-transform:uppercase;margin-top:8px';
-    controls.appendChild(fieldLabel);
-
-    const fieldInput = document.createElement('input');
-    fieldInput.id = 'field-filter-input';
-    fieldInput.placeholder = 'conversationId';
-    fieldInput.value = STATE.fieldFilterName || '';
-    fieldInput.style.cssText = 'padding:6px 8px;background:#0f172a;border:1px solid #475569;color:#cbd5e1;border-radius:3px;font-family:Monaco,monospace;font-size:9px;width:100%';
-    
-    fieldInput.addEventListener('input', (e) => {
-      const fieldName = e.target.value.trim() || null;
-      STATE.fieldFilterName = fieldName;
-      STATE.fieldFilterValue = null;
-      applyFilters();
-      renderLogList();
-      renderFieldValues();
-    });
-    
-    controls.appendChild(fieldInput);
-
-    // Reset Button
-    const resetBtn = document.createElement("button");
-    resetBtn.textContent = "🔄 Reset";
-    resetBtn.style.cssText = `padding:6px 10px;background:#f59e0b;border:none;color:#fff;border-radius:3px;cursor:pointer;font-weight:bold;font-size:10px;width:100%;margin-top:4px;transition:all 0.2s`;
-    resetBtn.onmouseover = () => { resetBtn.style.background = "#d97706"; };
-    resetBtn.onmouseout = () => { resetBtn.style.background = "#f59e0b"; };
-    resetBtn.onclick = () => {
-      STATE.fieldFilterName = null;
-      STATE.fieldFilterValue = null;
-      fieldInput.value = '';
-      applyFilters();
-      renderLogList();
-      renderFieldValues();
-    };
-    controls.appendChild(resetBtn);
-
-    rightPanel.appendChild(controls);
-
-    // RIGHT BOTTOM: Detail Panel
+    // Detail Panel
     const detailPanel = document.createElement("div");
     detailPanel.id = "detail-panel";
-    detailPanel.style.cssText = `flex:1;overflow-y:auto;background:#1e293b;padding:12px;max-height:55%;min-height:150px;border-top:1px solid #334155`;
-    detailPanel.innerHTML = `<p style="color:#64748b;font-size:10px">Select log to view</p>`;
+    detailPanel.style.cssText = `flex:1;overflow-y:auto;background:#0f172a;padding:10px;border-radius:3px;border:1px solid #334155`;
+    detailPanel.innerHTML = `<p style="color:#64748b;font-size:10px">Select a log to view details</p>`;
     rightPanel.appendChild(detailPanel);
 
     // Field Values Container
     const fieldValuesContainer = document.createElement("div");
     fieldValuesContainer.id = "field-values-container";
-    fieldValuesContainer.style.cssText = `background:#0f172a;padding:10px;border-top:1px solid #334155;max-height:100px;overflow-y:auto;display:none;font-size:9px`;
+    fieldValuesContainer.style.cssText = `background:#0f172a;padding:10px;border-radius:3px;max-height:120px;overflow-y:auto;display:none;font-size:9px;border:1px solid #334155`;
     rightPanel.appendChild(fieldValuesContainer);
 
     mainContent.appendChild(rightPanel);
