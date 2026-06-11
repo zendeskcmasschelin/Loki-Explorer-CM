@@ -420,8 +420,8 @@ function renderPopup() {
     ["INFO", "WARN", "ERROR"].forEach(level => {
       const btn = document.createElement("button");
       btn.id = `filter-${level}`;
-      btn.textContent = `$${level} ($${STATE.allLogs.filter(l => l.level === level).length})`;
-      btn.style.cssText = `padding:4px 8px;border:2px solid $${STATE.filters[level] ? getColorForLevel(level) : "#475569"};background:$${STATE.filters[level] ? getColorForLevel(level) + "20" : "#1e293b"};color:${getColorForLevel(level)};border-radius:3px;cursor:pointer;font-weight:bold;font-size:9px;flex:1;min-width:50px;transition:all 0.2s`;
+      btn.textContent = `${level} (${STATE.allLogs.filter(l => l.level === level).length})`;
+      btn.style.cssText = `padding:4px 8px;border:2px solid ${STATE.filters[level] ? getColorForLevel(level) : "#475569"};background:${STATE.filters[level] ? getColorForLevel(level) + "20" : "#1e293b"};color:${getColorForLevel(level)};border-radius:3px;cursor:pointer;font-weight:bold;font-size:9px;flex:1;min-width:50px;transition:all 0.2s`;
       btn.onclick = () => toggleFilter(level);
       filterBtnsRow.appendChild(btn);
     });
@@ -471,7 +471,49 @@ function renderPopup() {
     queryBtn.style.cssText = `padding:8px 10px;background:#8b5cf6;border:none;color:#fff;border-radius:3px;cursor:pointer;font-weight:bold;font-size:10px;width:100%;margin-top:6px;transition:all 0.2s`;
     queryBtn.onmouseover = () => { queryBtn.style.background = "#7c3aed"; };
     queryBtn.onmouseout = () => { queryBtn.style.background = "#8b5cf6"; };
-    queryBtn.onclick = () => fetch
+    queryBtn.onclick = () => fetchLogsFromLoki(false);
+    leftPanel.appendChild(queryBtn);
+
+    // Field Filter Section
+    const fieldLabel = document.createElement('label');
+    fieldLabel.textContent = '🔎 Filter by Field';
+    fieldLabel.style.cssText = 'font-size:9px;font-weight:600;color:#94a3b8;text-transform:uppercase;margin-top:10px;margin-bottom:4px';
+    leftPanel.appendChild(fieldLabel);
+
+    const fieldInput = document.createElement('input');
+    fieldInput.id = 'field-filter-input';
+    fieldInput.placeholder = 'conversationId';
+    fieldInput.value = STATE.fieldFilterName || '';
+    fieldInput.style.cssText = 'padding:6px 8px;background:#0f172a;border:1px solid #475569;color:#cbd5e1;border-radius:3px;font-family:Monaco,monospace;font-size:9px;width:100%';
+    
+    fieldInput.addEventListener('input', (e) => {
+      const fieldName = e.target.value.trim() || null;
+      STATE.fieldFilterName = fieldName;
+      STATE.fieldFilterValue = null;
+      applyFilters();
+      renderLogList();
+      renderFieldValues();
+    });
+    
+    leftPanel.appendChild(fieldInput);
+
+    // Reset Button
+    const resetBtn = document.createElement("button");
+    resetBtn.textContent = "🔄 Reset";
+    resetBtn.style.cssText = `padding:8px 10px;background:#f59e0b;border:none;color:#fff;border-radius:3px;cursor:pointer;font-weight:bold;font-size:10px;width:100%;margin-top:6px;transition:all 0.2s`;
+    resetBtn.onmouseover = () => { resetBtn.style.background = "#d97706"; };
+    resetBtn.onmouseout = () => { resetBtn.style.background = "#f59e0b"; };
+    resetBtn.onclick = () => {
+      STATE.fieldFilterName = null;
+      STATE.fieldFilterValue = null;
+      fieldInput.value = '';
+      applyFilters();
+      renderLogList();
+      renderFieldValues();
+    };
+    leftPanel.appendChild(resetBtn);
+
+    mainContent.appendChild(leftPanel);
 
     // MIDDLE: Log List
     const logList = document.createElement("div");
