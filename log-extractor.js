@@ -550,6 +550,51 @@ function renderPopup() {
     header.innerHTML = `<div><h2 style="margin:0;font-size:18px;color:#0ea5e9">📊 Logs</h2><p style="margin:5px 0 0 0;font-size:12px;color:#94a3b8">Total: ${STATE.allLogs.length} | Shown: ${STATE.filteredLogs.length}</p></div><button id="close-popup" style="padding:6px 12px;background:#ef4444;border:none;border-radius:4px;color:#fff;cursor:pointer;font-weight:bold">Close</button>`;
     popup.appendChild(header);
 
+    // QUERY SECTION (above main content) - NEW
+    const querySection = document.createElement("div");
+    querySection.style.cssText = `background:#0f172a;padding:12px 15px;border-bottom:1px solid #334155;display:flex;gap:10px;align-items:flex-end`;
+
+    const queryLabel = document.createElement('label');
+    queryLabel.textContent = '🔗 LogQL Query';
+    queryLabel.style.cssText = 'font-size:11px;font-weight:700;color:#0ea5e9;text-transform:uppercase;margin-bottom:4px;letter-spacing:0.5px;display:block;width:100%';
+
+    const queryInput = document.createElement("input");
+    queryInput.id = "loki-query-input";
+    queryInput.placeholder = '{job="grafana"}';
+    queryInput.value = parseUrlForQuery() || '{service_name="sunco"}';
+    queryInput.style.cssText = 'padding:8px 10px;background:#0f172a;border:1px solid #475569;color:#cbd5e1;border-radius:3px;font-family:Monaco,monospace;font-size:10px;flex:1;transition:all 0.2s;cursor:text';
+    queryInput.addEventListener("focus", function() {
+      this.style.borderColor = "#0ea5e9";
+      this.style.boxShadow = "0 0 0 2px rgba(14, 165, 233, 0.2)";
+    });
+    queryInput.addEventListener("blur", function() {
+      this.style.borderColor = "#475569";
+      this.style.boxShadow = "none";
+    });
+
+    const queryInputWrapper = document.createElement("div");
+    queryInputWrapper.style.cssText = 'display:flex;flex-direction:column;gap:4px;flex:1;min-width:300px';
+    queryInputWrapper.appendChild(queryLabel);
+    queryInputWrapper.appendChild(queryInput);
+
+    querySection.appendChild(queryInputWrapper);
+
+    // Switchboard Actions Button
+    const switchboardBtn = document.createElement("button");
+    switchboardBtn.textContent = "⚡ Switchboard";
+    switchboardBtn.style.cssText = `padding:8px 12px;background:#06b6d4;border:none;color:#fff;border-radius:3px;cursor:pointer;font-weight:bold;font-size:10px;height:fit-content;transition:all 0.2s`;
+    switchboardBtn.onmouseover = () => { switchboardBtn.style.background = "#0891b2"; };
+    switchboardBtn.onmouseout = () => { switchboardBtn.style.background = "#06b6d4"; };
+    switchboardBtn.onclick = () => {
+      const currentQuery = queryInput.value.trim();
+      if (!currentQuery.includes('|~ "Switchboard"')) {
+        queryInput.value = currentQuery + ' |~ "Switchboard"';
+      }
+    };
+    querySection.appendChild(switchboardBtn);
+
+    popup.appendChild(querySection);
+
     // MAIN CONTENT (left=controls, middle=logs, right=details)
     const mainContent = document.createElement("div");
     mainContent.style.cssText = `display:flex;flex:1;overflow:hidden;gap:0;background:#334155;position:relative`;
@@ -576,41 +621,6 @@ function renderPopup() {
       filterBtnsRow.appendChild(btn);
     });
     leftPanel.appendChild(filterBtnsRow);
-
-    // Query Input Section
-    const queryLabel = document.createElement('label');
-    queryLabel.textContent = '🔗 LogQL Query';
-    queryLabel.style.cssText = 'font-size:11px;font-weight:700;color:#0ea5e9;text-transform:uppercase;margin-top:10px;margin-bottom:4px;letter-spacing:0.5px';
-    leftPanel.appendChild(queryLabel);
-
-    const queryInput = document.createElement("input");
-    queryInput.id = "loki-query-input";
-    queryInput.placeholder = '{job="grafana"}';
-    queryInput.value = parseUrlForQuery() || '{service_name="sunco"}';
-    queryInput.style.cssText = 'padding:8px 10px;background:#0f172a;border:1px solid #475569;color:#cbd5e1;border-radius:3px;font-family:Monaco,monospace;font-size:10px;width:100%;transition:all 0.2s;cursor:text';
-    queryInput.addEventListener("focus", function() {
-      this.style.borderColor = "#0ea5e9";
-      this.style.boxShadow = "0 0 0 2px rgba(14, 165, 233, 0.2)";
-    });
-    queryInput.addEventListener("blur", function() {
-      this.style.borderColor = "#475569";
-      this.style.boxShadow = "none";
-    });
-    leftPanel.appendChild(queryInput);
-
-    // Switchboard Actions Button (moved here - between LogQL and Date Range)
-    const switchboardBtn = document.createElement("button");
-    switchboardBtn.textContent = "⚡ Switchboard Actions";
-    switchboardBtn.style.cssText = `padding:8px 10px;background:#06b6d4;border:none;color:#fff;border-radius:3px;cursor:pointer;font-weight:bold;font-size:10px;width:100%;margin-top:6px;transition:all 0.2s`;
-    switchboardBtn.onmouseover = () => { switchboardBtn.style.background = "#0891b2"; };
-    switchboardBtn.onmouseout = () => { switchboardBtn.style.background = "#06b6d4"; };
-    switchboardBtn.onclick = () => {
-      const currentQuery = queryInput.value.trim();
-      if (!currentQuery.includes('|~ "Switchboard"')) {
-        queryInput.value = currentQuery + ' |~ "Switchboard"';
-      }
-    };
-    leftPanel.appendChild(switchboardBtn);
 
     // Date Range Section
     const dateLabel = document.createElement('label');
