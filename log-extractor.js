@@ -462,13 +462,13 @@ function parseJsonFields(rawJson) {
         STATE.lastLogTimestamp = logsFromApi[logsFromApi.length - 1].timestamp;
       }
 
-      if (logsFromApi.length < 200) {
+if (logsFromApi.length < 200) {
         STATE.hasMoreLogs = false;
       }
 
       hideLoading();
       applyFilters();
-      ;
+      renderPopup();
     } catch (err) {
       clearTimeout(timeout);
       hideLoading();
