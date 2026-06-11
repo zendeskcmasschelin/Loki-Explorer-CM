@@ -586,6 +586,20 @@ function renderPopup() {
     });
     leftPanel.appendChild(queryInput);
 
+    // Switchboard Actions Button (moved here - between LogQL and Date Range)
+    const switchboardBtn = document.createElement("button");
+    switchboardBtn.textContent = "⚡ Switchboard Actions";
+    switchboardBtn.style.cssText = `padding:8px 10px;background:#06b6d4;border:none;color:#fff;border-radius:3px;cursor:pointer;font-weight:bold;font-size:10px;width:100%;margin-top:6px;transition:all 0.2s`;
+    switchboardBtn.onmouseover = () => { switchboardBtn.style.background = "#0891b2"; };
+    switchboardBtn.onmouseout = () => { switchboardBtn.style.background = "#06b6d4"; };
+    switchboardBtn.onclick = () => {
+      const currentQuery = queryInput.value.trim();
+      if (!currentQuery.includes('|~ "Switchboard"')) {
+        queryInput.value = currentQuery + ' |~ "Switchboard"';
+      }
+    };
+    leftPanel.appendChild(switchboardBtn);
+
     // Date Range Section
     const dateLabel = document.createElement('label');
     dateLabel.textContent = '📅 Date Range';
@@ -690,20 +704,6 @@ function renderPopup() {
       startDateInput.value = formatDateForInput(startDate);
       endDateInput.value = formatDateForInput(nowDate);
     });
-
-    // Switchboard Actions Button
-    const switchboardBtn = document.createElement("button");
-    switchboardBtn.textContent = "⚡ Switchboard Actions";
-    switchboardBtn.style.cssText = `padding:8px 10px;background:#06b6d4;border:none;color:#fff;border-radius:3px;cursor:pointer;font-weight:bold;font-size:10px;width:100%;margin-top:6px;transition:all 0.2s`;
-    switchboardBtn.onmouseover = () => { switchboardBtn.style.background = "#0891b2"; };
-    switchboardBtn.onmouseout = () => { switchboardBtn.style.background = "#06b6d4"; };
-    switchboardBtn.onclick = () => {
-      const currentQuery = queryInput.value.trim();
-      if (!currentQuery.includes('|~ "Switchboard"')) {
-        queryInput.value = currentQuery + ' |~ "Switchboard"';
-      }
-    };
-    leftPanel.appendChild(switchboardBtn);
 
     // Fetch Button
     const queryBtn = document.createElement("button");
