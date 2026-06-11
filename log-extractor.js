@@ -568,34 +568,28 @@ function renderPopup() {
     // Query Input Section
     const queryLabel = document.createElement('label');
     queryLabel.textContent = '🔗 LogQL Query';
-    queryLabel.style.cssText = 'font-size:9px;font-weight:600;color:#94a3b8;text-transform:uppercase;margin-top:10px;margin-bottom:4px';
+    queryLabel.style.cssText = 'font-size:11px;font-weight:700;color:#0ea5e9;text-transform:uppercase;margin-top:10px;margin-bottom:4px;letter-spacing:0.5px';
     leftPanel.appendChild(queryLabel);
 
     const queryInput = document.createElement("input");
     queryInput.id = "loki-query-input";
     queryInput.placeholder = '{job="grafana"}';
     queryInput.value = parseUrlForQuery() || '{service_name="sunco"}';
-    queryInput.style.cssText = 'padding:6px 8px;background:#0f172a;border:1px solid #475569;color:#cbd5e1;border-radius:3px;font-family:Monaco,monospace;font-size:9px;width:100%';
+    queryInput.style.cssText = 'padding:8px 10px;background:#0f172a;border:1px solid #475569;color:#cbd5e1;border-radius:3px;font-family:Monaco,monospace;font-size:10px;width:100%;transition:all 0.2s;cursor:text';
+    queryInput.addEventListener("focus", function() {
+      this.style.borderColor = "#0ea5e9";
+      this.style.boxShadow = "0 0 0 2px rgba(14, 165, 233, 0.2)";
+    });
+    queryInput.addEventListener("blur", function() {
+      this.style.borderColor = "#475569";
+      this.style.boxShadow = "none";
+    });
     leftPanel.appendChild(queryInput);
 
-    // Switchboard Actions Button
-    const switchboardBtn = document.createElement("button");
-    switchboardBtn.textContent = "⚡ Switchboard Actions";
-    switchboardBtn.style.cssText = `padding:8px 10px;background:#06b6d4;border:none;color:#fff;border-radius:3px;cursor:pointer;font-weight:bold;font-size:10px;width:100%;margin-top:4px;transition:all 0.2s`;
-    switchboardBtn.onmouseover = () => { switchboardBtn.style.background = "#0891b2"; };
-    switchboardBtn.onmouseout = () => { switchboardBtn.style.background = "#06b6d4"; };
-    switchboardBtn.onclick = () => {
-      const currentQuery = queryInput.value.trim();
-      if (!currentQuery.includes('|~ "Switchboard"')) {
-        queryInput.value = currentQuery + ' |~ "Switchboard"';
-      }
-    };
-    leftPanel.appendChild(switchboardBtn);
-
-// Date Range Section
+    // Date Range Section
     const dateLabel = document.createElement('label');
     dateLabel.textContent = '📅 Date Range';
-    dateLabel.style.cssText = 'font-size:11px;font-weight:700;color:#0ea5e9;text-transform:uppercase;margin-top:10px;margin-bottom:6px;letter-spacing:1px';
+    dateLabel.style.cssText = 'font-size:11px;font-weight:700;color:#0ea5e9;text-transform:uppercase;margin-top:10px;margin-bottom:6px;letter-spacing:0.5px';
     leftPanel.appendChild(dateLabel);
 
     // Helper function to format dates with seconds and milliseconds
@@ -613,7 +607,7 @@ function renderPopup() {
     // Predefined label
     const predefLabel = document.createElement('label');
     predefLabel.textContent = 'Predefined Ranges:';
-    predefLabel.style.cssText = 'font-size:10px;font-weight:700;color:#cbd5e1;margin-top:8px;margin-bottom:4px;display:block';
+    predefLabel.style.cssText = 'font-size:10px;font-weight:700;color:#cbd5e1;margin-bottom:4px;display:block';
     leftPanel.appendChild(predefLabel);
 
     // Preset Dropdown (proper dropdown, not multi-select)
@@ -643,13 +637,13 @@ function renderPopup() {
     // Start Date with Milliseconds
     const startDateLabel = document.createElement('label');
     startDateLabel.textContent = 'Start Date & Time:';
-    startDateLabel.style.cssText = 'font-size:10px;font-weight:700;color:#cbd5e1;margin-top:8px;margin-bottom:4px;display:block';
+    startDateLabel.style.cssText = 'font-size:10px;font-weight:700;color:#cbd5e1;margin-bottom:4px;display:block';
     leftPanel.appendChild(startDateLabel);
 
     const startDateInput = document.createElement("input");
     startDateInput.id = "loki-start-date";
     startDateInput.type = "datetime-local";
-    startDateInput.step = "0.001";  // Enable milliseconds
+    startDateInput.step = "0.001";
     const now = new Date();
     const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
     startDateInput.value = formatDateForInput(fiveMinutesAgo);
@@ -667,13 +661,13 @@ function renderPopup() {
     // End Date with Milliseconds
     const endDateLabel = document.createElement('label');
     endDateLabel.textContent = 'End Date & Time:';
-    endDateLabel.style.cssText = 'font-size:10px;font-weight:700;color:#cbd5e1;margin-top:8px;margin-bottom:4px;display:block';
+    endDateLabel.style.cssText = 'font-size:10px;font-weight:700;color:#cbd5e1;margin-bottom:4px;display:block';
     leftPanel.appendChild(endDateLabel);
 
     const endDateInput = document.createElement("input");
     endDateInput.id = "loki-end-date";
     endDateInput.type = "datetime-local";
-    endDateInput.step = "0.001";  // Enable milliseconds
+    endDateInput.step = "0.001";
     endDateInput.value = formatDateForInput(now);
     endDateInput.style.cssText = 'padding:8px 10px;background:#0f172a;border:1px solid #475569;color:#cbd5e1;border-radius:3px;font-family:Monaco,monospace;font-size:10px;width:100%;margin-bottom:10px;cursor:pointer;transition:all 0.2s';
     endDateInput.addEventListener("focus", function() {
@@ -689,13 +683,27 @@ function renderPopup() {
     // Update dates when preset changes
     presetSelect.addEventListener("change", (e) => {
       const minutes = parseInt(e.target.value);
-      if (minutes === null) return;  // "Select a range..." option
+      if (minutes === null || isNaN(minutes)) return;
       
       const nowDate = new Date();
       const startDate = new Date(nowDate.getTime() - minutes * 60 * 1000);
       startDateInput.value = formatDateForInput(startDate);
       endDateInput.value = formatDateForInput(nowDate);
     });
+
+    // Switchboard Actions Button
+    const switchboardBtn = document.createElement("button");
+    switchboardBtn.textContent = "⚡ Switchboard Actions";
+    switchboardBtn.style.cssText = `padding:8px 10px;background:#06b6d4;border:none;color:#fff;border-radius:3px;cursor:pointer;font-weight:bold;font-size:10px;width:100%;margin-top:6px;transition:all 0.2s`;
+    switchboardBtn.onmouseover = () => { switchboardBtn.style.background = "#0891b2"; };
+    switchboardBtn.onmouseout = () => { switchboardBtn.style.background = "#06b6d4"; };
+    switchboardBtn.onclick = () => {
+      const currentQuery = queryInput.value.trim();
+      if (!currentQuery.includes('|~ "Switchboard"')) {
+        queryInput.value = currentQuery + ' |~ "Switchboard"';
+      }
+    };
+    leftPanel.appendChild(switchboardBtn);
 
     // Fetch Button
     const queryBtn = document.createElement("button");
@@ -709,14 +717,23 @@ function renderPopup() {
     // Field Filter Section
     const fieldLabel = document.createElement('label');
     fieldLabel.textContent = '🔎 Filter by Field';
-    fieldLabel.style.cssText = 'font-size:9px;font-weight:600;color:#94a3b8;text-transform:uppercase;margin-top:10px;margin-bottom:4px';
+    fieldLabel.style.cssText = 'font-size:11px;font-weight:700;color:#0ea5e9;text-transform:uppercase;margin-top:10px;margin-bottom:4px;letter-spacing:0.5px';
     leftPanel.appendChild(fieldLabel);
 
     const fieldInput = document.createElement('input');
     fieldInput.id = 'field-filter-input';
     fieldInput.placeholder = 'conversationId';
     fieldInput.value = STATE.fieldFilterName || '';
-    fieldInput.style.cssText = 'padding:6px 8px;background:#0f172a;border:1px solid #475569;color:#cbd5e1;border-radius:3px;font-family:Monaco,monospace;font-size:9px;width:100%';
+    fieldInput.style.cssText = 'padding:8px 10px;background:#0f172a;border:1px solid #475569;color:#cbd5e1;border-radius:3px;font-family:Monaco,monospace;font-size:10px;width:100%;margin-bottom:8px;transition:all 0.2s;cursor:text';
+    
+    fieldInput.addEventListener("focus", function() {
+      this.style.borderColor = "#0ea5e9";
+      this.style.boxShadow = "0 0 0 2px rgba(14, 165, 233, 0.2)";
+    });
+    fieldInput.addEventListener("blur", function() {
+      this.style.borderColor = "#475569";
+      this.style.boxShadow = "none";
+    });
     
     fieldInput.addEventListener('input', (e) => {
       const fieldName = e.target.value.trim() || null;
@@ -729,10 +746,16 @@ function renderPopup() {
     
     leftPanel.appendChild(fieldInput);
 
+    // Field Values Container (in left sidebar, between input and reset)
+    const fieldValuesContainer = document.createElement("div");
+    fieldValuesContainer.id = "field-values-container";
+    fieldValuesContainer.style.cssText = `background:#0f172a;padding:8px 10px;border-radius:3px;max-height:150px;overflow-y:auto;display:none;font-size:9px;border:1px solid #334155;margin-bottom:8px;margin-top:0`;
+    leftPanel.appendChild(fieldValuesContainer);
+
     // Reset Button
     const resetBtn = document.createElement("button");
     resetBtn.textContent = "🔄 Reset";
-    resetBtn.style.cssText = `padding:8px 10px;background:#f59e0b;border:none;color:#fff;border-radius:3px;cursor:pointer;font-weight:bold;font-size:10px;width:100%;margin-top:6px;transition:all 0.2s`;
+    resetBtn.style.cssText = `padding:8px 10px;background:#f59e0b;border:none;color:#fff;border-radius:3px;cursor:pointer;font-weight:bold;font-size:10px;width:100%;margin-top:0;transition:all 0.2s`;
     resetBtn.onmouseover = () => { resetBtn.style.background = "#d97706"; };
     resetBtn.onmouseout = () => { resetBtn.style.background = "#f59e0b"; };
     resetBtn.onclick = () => {
@@ -770,12 +793,6 @@ function renderPopup() {
     detailPanel.style.cssText = `flex:1;overflow-y:auto;background:#0f172a;padding:10px;border-radius:3px;border:1px solid #334155`;
     detailPanel.innerHTML = `<p style="color:#64748b;font-size:10px">Select a log to view details</p>`;
     rightPanel.appendChild(detailPanel);
-
-    // Field Values Container
-    const fieldValuesContainer = document.createElement("div");
-    fieldValuesContainer.id = "field-values-container";
-    fieldValuesContainer.style.cssText = `background:#0f172a;padding:10px;border-radius:3px;max-height:120px;overflow-y:auto;display:none;font-size:9px;border:1px solid #334155`;
-    rightPanel.appendChild(fieldValuesContainer);
 
     mainContent.appendChild(rightPanel);
     popup.appendChild(mainContent);
