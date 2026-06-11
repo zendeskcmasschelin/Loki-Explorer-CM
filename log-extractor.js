@@ -408,7 +408,7 @@ async function fetchLogsFromLoki(isLoadMore = false) {
       STATE.hasMoreLogs = true;
       STATE.allLogs = [];
       STATE.filteredLogs = [];
-      showLoading(`Fetching 200 logs`);
+      showLoading(`Fetching logs`);
     } else {
       query = STATE.currentQuery;
       showLoading("Loading 200 more");
@@ -431,7 +431,7 @@ async function fetchLogsFromLoki(isLoadMore = false) {
       }
       const lastLogMs = new Date(STATE.lastLogTimestamp).getTime();
       end = lastLogMs * 1_000_000;
-      start = end - 5 * 60 * 1_000_000_000;  // fallback to 5 minutes
+      start = end - 5 * 60 * 1_000_000_000;
     }
 
     const url = window.location.href;
