@@ -375,17 +375,23 @@ function parseJsonFields(rawJson) {
 
     let query, minutes;
 
-    if (!isLoadMore) {
+if (!isLoadMore) {
       const queryInput = document.getElementById("loki-query-input");
-      const timeInput = document.getElementById("loki-time-input");
+      const startDateInput = document.getElementById("loki-start-date");
+      const endDateInput = document.getElementById("loki-end-date");
       query = queryInput.value.trim();
       if (!query) {
         alert("Enter query");
         return;
       }
-      minutes = parseInt(timeInput.value) || 5;
-      if (minutes <= 0) {
-        alert("Time > 0");
+      const startDate = new Date(startDateInput.value);
+      const endDate = new Date(endDateInput.value);
+      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        alert("Invalid date range");
+        return;
+      }
+      if (startDate >= endDate) {
+        alert("Start date must be before end date");
         return;
       }
       STATE.currentQuery = query;
@@ -401,12 +407,16 @@ function parseJsonFields(rawJson) {
       showLoading("Loading 200 more");
     }
 
-    const now = Date.now() * 1_000_000;
-    let start, end;
+let start, end;
 
     if (!isLoadMore) {
-      end = now;
-      start = now - minutes * 60 * 1_000_000_000;
+      const startDateInput = document.getElementById("loki-start-date");
+      const endDateInput = document.getElementById("loki-end-date");
+      const startDate = new Date(startDateInput.value);
+      const endDate = new Date(endDateInput.value);
+      
+      start = Math.floor(startDate.getTime() * 1_000_000);
+      end = Math.floor(endDate.getTime() * 1_000_000);
     } else {
       if (!STATE.lastLogTimestamp) {
         hideLoading();
@@ -546,15 +556,6 @@ function renderPopup() {
     });
     leftPanel.appendChild(filterBtnsRow);
 
-    // Sort Button
-    const sortBtn = document.createElement("button");
-    sortBtn.textContent = `${STATE.sortOrder === "DESC" ? "⬇️ Newest" : "⬆️ Oldest"}`;
-    sortBtn.style.cssText = `padding:8px 10px;background:#10b981;border:none;color:#fff;border-radius:3px;cursor:pointer;font-weight:bold;font-size:10px;transition:all 0.2s;width:100%;margin-top:6px`;
-    sortBtn.onmouseover = () => { sortBtn.style.background = "#059669"; };
-    sortBtn.onmouseout = () => { sortBtn.style.background = "#10b981"; };
-    sortBtn.onclick = toggleSortOrder;
-    leftPanel.appendChild(sortBtn);
-
     // Query Input Section
     const queryLabel = document.createElement('label');
     queryLabel.textContent = '🔗 LogQL Query';
@@ -568,21 +569,83 @@ function renderPopup() {
     queryInput.style.cssText = 'padding:6px 8px;background:#0f172a;border:1px solid #475569;color:#cbd5e1;border-radius:3px;font-family:Monaco,monospace;font-size:9px;width:100%';
     leftPanel.appendChild(queryInput);
 
-    // Time Input Section
-    const timeLabel = document.createElement('label');
-    timeLabel.textContent = '⏱ Time Range (Min)';
-    timeLabel.style.cssText = 'font-size:9px;font-weight:600;color:#94a3b8;text-transform:uppercase;margin-top:8px;margin-bottom:4px';
-    leftPanel.appendChild(timeLabel);
+// Date Range Section
+    const dateLabel = document.createElement('label');
+    dateLabel.textContent = '📅 Date Range';
+    dateLabel.style.cssText = 'font-size:9px;font-weight:600;color:#94a3b8;text-transform:uppercase;margin-top:8px;margin-bottom:4px';
+    leftPanel.appendChild(dateLabel);
 
-    const timeInput = document.createElement("input");
-    timeInput.id = "loki-time-input";
-    timeInput.type = "number";
-    timeInput.placeholder = '5';
-    timeInput.value = parseUrlForTimeRange();
-    timeInput.min = "1";
-    timeInput.max = "1440";
-    timeInput.style.cssText = 'padding:6px 8px;background:#0f172a;border:1px solid #475569;color:#cbd5e1;border-radius:3px;font-family:Monaco,monospace;font-size:9px;width:100%';
-    leftPanel.appendChild(timeInput);
+    // Preset Dropdown
+    const presetSelect = document.createElement("select");
+    presetSelect.id = "date-preset-select";
+    presetSelect.style.cssText = 'padding:6px 8px;background:#0f172a;border:1px solid #475569;color:#cbd5e1;border-radius:3px;font-family:Monaco,monospace;font-size:9px;width:100%;margin-bottom:6px;cursor:pointer';
+    
+    const presets = [
+      { label: 'Last 5 minutes', minutes: 5 },
+      { label: 'Last 15 minutes', minutes: 15 },
+      { label: 'Last 1 hour', minutes: 60 },
+      { label: 'Last 4 hours', minutes: 240 },
+      { label: 'Last 1 day', minutes: 1440 }
+    ];
+    
+    presets.forEach(preset => {
+      const option = document.createElement("option");
+      option.value = preset.minutes;
+      option.textContent = preset.label;
+      presetSelect.appendChild(option);
+    });
+    
+    presetSelect.addEventListener("change", (e) => {
+      const minutes = parseInt(e.target.value);
+      const now = new Date();
+      const start = new Date(now.getTime() - minutes * 60 * 1000);
+      startDateInput.valueAsDate = start;
+      endDateInput.valueAsDate = now;
+    });
+    
+    leftPanel.appendChild(presetSelect);
+
+    // Start Date
+    const startDateLabel = document.createElement('label');
+    startDateLabel.textContent = 'Start:';
+    startDateLabel.style.cssText = 'font-size:8px;font-weight:600;color:#94a3b8';
+    leftPanel.appendChild(startDateLabel);
+
+    const startDateInput = document.createElement("input");
+    startDateInput.id = "loki-start-date";
+    startDateInput.type = "datetime-local";
+    const now = new Date();
+    const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+    startDateInput.valueAsDate = fiveMinutesAgo;
+    startDateInput.style.cssText = 'padding:6px 8px;background:#0f172a;border:1px solid #475569;color:#cbd5e1;border-radius:3px;font-family:Monaco,monospace;font-size:9px;width:100%;margin-bottom:6px;cursor:pointer';
+    leftPanel.appendChild(startDateInput);
+
+    // End Date
+    const endDateLabel = document.createElement('label');
+    endDateLabel.textContent = 'End:';
+    endDateLabel.style.cssText = 'font-size:8px;font-weight:600;color:#94a3b8';
+    leftPanel.appendChild(endDateLabel);
+
+    const endDateInput = document.createElement("input");
+    endDateInput.id = "loki-end-date";
+    endDateInput.type = "datetime-local";
+    endDateInput.valueAsDate = now;
+    endDateInput.style.cssText = 'padding:6px 8px;background:#0f172a;border:1px solid #475569;color:#cbd5e1;border-radius:3px;font-family:Monaco,monospace;font-size:9px;width:100%;margin-bottom:6px;cursor:pointer';
+    leftPanel.appendChild(endDateInput);
+
+  // Switchboard Actions Button
+    const switchboardBtn = document.createElement("button");
+    switchboardBtn.textContent = "⚡ Switchboard Actions";
+    switchboardBtn.style.cssText = `padding:8px 10px;background:#06b6d4;border:none;color:#fff;border-radius:3px;cursor:pointer;font-weight:bold;font-size:10px;width:100%;margin-top:6px;transition:all 0.2s`;
+    switchboardBtn.onmouseover = () => { switchboardBtn.style.background = "#0891b2"; };
+    switchboardBtn.onmouseout = () => { switchboardBtn.style.background = "#06b6d4"; };
+    switchboardBtn.onclick = () => {
+      const currentQuery = queryInput.value.trim();
+      if (!currentQuery.includes('|~ "Switchboard"')) {
+        queryInput.value = currentQuery + ' |~ "Switchboard"';
+      }
+    };
+    leftPanel.appendChild(switchboardBtn);
 
     // Fetch Button
     const queryBtn = document.createElement("button");
@@ -675,7 +738,11 @@ function renderPopup() {
       if (e.key === "Enter") fetchLogsFromLoki(false);
     });
     
-    timeInput.addEventListener("keypress", (e) => {
+startDateInput.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") fetchLogsFromLoki(false);
+    });
+    
+    endDateInput.addEventListener("keypress", (e) => {
       if (e.key === "Enter") fetchLogsFromLoki(false);
     });
 
