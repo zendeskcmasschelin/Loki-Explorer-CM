@@ -595,6 +595,73 @@ function renderPopup() {
       presetSelect.appendChild(option);
     });
     
+    const formatDateForInput = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      return `${year}-${month}-${day}T${hours}:${minutes}`;
+    };
+    
+    presetSelect.addEventListener("change", (e) => {
+      const minutes = parseInt(e.target.value);
+      const now = new Date();
+      const start = new Date(now.getTime() - minutes * 60 * 1000);
+      startDateInput.value = formatDateForInput(start);
+      endDateInput.value = formatDateForInput(now);
+    });
+    
+    leftPanel.appendChild(presetSelect);
+
+    // Start Date
+    const startDateLabel = document.createElement('label');
+    startDateLabel.textContent = 'Start:';
+    startDateLabel.style.cssText = 'font-size:8px;font-weight:600;color:#94a3b8;margin-top:4px';
+    leftPanel.appendChild(startDateLabel);
+
+    const startDateInput = document.createElement("input");
+    startDateInput.id = "loki-start-date";
+    startDateInput.type = "datetime-local";
+    const now = new Date();
+    const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+    startDateInput.value = formatDateForInput(fiveMinutesAgo);
+    startDateInput.style.cssText = 'padding:6px 8px;background:#0f172a;border:1px solid #475569;color:#cbd5e1;border-radius:3px;font-family:Monaco,monospace;font-size:9px;width:100%;margin-bottom:6px;cursor:pointer';
+    leftPanel.appendChild(startDateInput);
+
+    // End Date
+    const endDateLabel = document.createElement('label');
+    endDateLabel.textContent = 'End:';
+    endDateLabel.style.cssText = 'font-size:8px;font-weight:600;color:#94a3b8;margin-top:4px';
+    leftPanel.appendChild(endDateLabel);
+
+    const endDateInput = document.createElement("input");
+    endDateInput.id = "loki-end-date";
+    endDateInput.type = "datetime-local";
+    endDateInput.value = formatDateForInput(now);
+    endDateInput.style.cssText = 'padding:6px 8px;background:#0f172a;border:1px solid #475569;color:#cbd5e1;border-radius:3px;font-family:Monaco,monospace;font-size:9px;width:100%;margin-bottom:6px;cursor:pointer';
+    leftPanel.appendChild(endDateInput);
+
+    // Preset Dropdown
+    const presetSelect = document.createElement("select");
+    presetSelect.id = "date-preset-select";
+    presetSelect.style.cssText = 'padding:6px 8px;background:#0f172a;border:1px solid #475569;color:#cbd5e1;border-radius:3px;font-family:Monaco,monospace;font-size:9px;width:100%;margin-bottom:6px;cursor:pointer';
+    
+    const presets = [
+      { label: 'Last 5 minutes', minutes: 5 },
+      { label: 'Last 15 minutes', minutes: 15 },
+      { label: 'Last 1 hour', minutes: 60 },
+      { label: 'Last 4 hours', minutes: 240 },
+      { label: 'Last 1 day', minutes: 1440 }
+    ];
+    
+    presets.forEach(preset => {
+      const option = document.createElement("option");
+      option.value = preset.minutes;
+      option.textContent = preset.label;
+      presetSelect.appendChild(option);
+    });
+    
     presetSelect.addEventListener("change", (e) => {
       const minutes = parseInt(e.target.value);
       const now = new Date();
