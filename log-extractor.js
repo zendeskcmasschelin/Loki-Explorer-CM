@@ -569,11 +569,35 @@ function renderPopup() {
     queryInput.style.cssText = 'padding:6px 8px;background:#0f172a;border:1px solid #475569;color:#cbd5e1;border-radius:3px;font-family:Monaco,monospace;font-size:9px;width:100%';
     leftPanel.appendChild(queryInput);
 
-// Date Range Section
+    // Switchboard Actions Button
+    const switchboardBtn = document.createElement("button");
+    switchboardBtn.textContent = "⚡ Switchboard Actions";
+    switchboardBtn.style.cssText = `padding:8px 10px;background:#06b6d4;border:none;color:#fff;border-radius:3px;cursor:pointer;font-weight:bold;font-size:10px;width:100%;margin-top:4px;transition:all 0.2s`;
+    switchboardBtn.onmouseover = () => { switchboardBtn.style.background = "#0891b2"; };
+    switchboardBtn.onmouseout = () => { switchboardBtn.style.background = "#06b6d4"; };
+    switchboardBtn.onclick = () => {
+      const currentQuery = queryInput.value.trim();
+      if (!currentQuery.includes('|~ "Switchboard"')) {
+        queryInput.value = currentQuery + ' |~ "Switchboard"';
+      }
+    };
+    leftPanel.appendChild(switchboardBtn);
+
+    // Date Range Section
     const dateLabel = document.createElement('label');
     dateLabel.textContent = '📅 Date Range';
-    dateLabel.style.cssText = 'font-size:9px;font-weight:600;color:#94a3b8;text-transform:uppercase;margin-top:8px;margin-bottom:4px';
+    dateLabel.style.cssText = 'font-size:9px;font-weight:600;color:#94a3b8;text-transform:uppercase;margin-top:10px;margin-bottom:4px';
     leftPanel.appendChild(dateLabel);
+
+    // Helper function to format dates
+    const formatDateForInput = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      return `${year}-${month}-${day}T${hours}:${minutes}`;
+    };
 
     // Preset Dropdown
     const presetSelect = document.createElement("select");
@@ -593,23 +617,6 @@ function renderPopup() {
       option.value = preset.minutes;
       option.textContent = preset.label;
       presetSelect.appendChild(option);
-    });
-    
-    const formatDateForInput = (date) => {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      const hours = String(date.getHours()).padStart(2, '0');
-      const minutes = String(date.getMinutes()).padStart(2, '0');
-      return `${year}-${month}-${day}T${hours}:${minutes}`;
-    };
-    
-    presetSelect.addEventListener("change", (e) => {
-      const minutes = parseInt(e.target.value);
-      const now = new Date();
-      const start = new Date(now.getTime() - minutes * 60 * 1000);
-      startDateInput.value = formatDateForInput(start);
-      endDateInput.value = formatDateForInput(now);
     });
     
     leftPanel.appendChild(presetSelect);
@@ -642,77 +649,14 @@ function renderPopup() {
     endDateInput.style.cssText = 'padding:6px 8px;background:#0f172a;border:1px solid #475569;color:#cbd5e1;border-radius:3px;font-family:Monaco,monospace;font-size:9px;width:100%;margin-bottom:6px;cursor:pointer';
     leftPanel.appendChild(endDateInput);
 
-    // Preset Dropdown
-    const presetSelect = document.createElement("select");
-    presetSelect.id = "date-preset-select";
-    presetSelect.style.cssText = 'padding:6px 8px;background:#0f172a;border:1px solid #475569;color:#cbd5e1;border-radius:3px;font-family:Monaco,monospace;font-size:9px;width:100%;margin-bottom:6px;cursor:pointer';
-    
-    const presets = [
-      { label: 'Last 5 minutes', minutes: 5 },
-      { label: 'Last 15 minutes', minutes: 15 },
-      { label: 'Last 1 hour', minutes: 60 },
-      { label: 'Last 4 hours', minutes: 240 },
-      { label: 'Last 1 day', minutes: 1440 }
-    ];
-    
-    presets.forEach(preset => {
-      const option = document.createElement("option");
-      option.value = preset.minutes;
-      option.textContent = preset.label;
-      presetSelect.appendChild(option);
-    });
-    
+    // Update dates when preset changes
     presetSelect.addEventListener("change", (e) => {
       const minutes = parseInt(e.target.value);
-      const now = new Date();
-      const start = new Date(now.getTime() - minutes * 60 * 1000);
-      startDateInput.valueAsDate = start;
-      endDateInput.valueAsDate = now;
+      const nowDate = new Date();
+      const startDate = new Date(nowDate.getTime() - minutes * 60 * 1000);
+      startDateInput.value = formatDateForInput(startDate);
+      endDateInput.value = formatDateForInput(nowDate);
     });
-    
-    leftPanel.appendChild(presetSelect);
-
-    // Start Date
-    const startDateLabel = document.createElement('label');
-    startDateLabel.textContent = 'Start:';
-    startDateLabel.style.cssText = 'font-size:8px;font-weight:600;color:#94a3b8';
-    leftPanel.appendChild(startDateLabel);
-
-    const startDateInput = document.createElement("input");
-    startDateInput.id = "loki-start-date";
-    startDateInput.type = "datetime-local";
-    const now = new Date();
-    const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
-    startDateInput.valueAsDate = fiveMinutesAgo;
-    startDateInput.style.cssText = 'padding:6px 8px;background:#0f172a;border:1px solid #475569;color:#cbd5e1;border-radius:3px;font-family:Monaco,monospace;font-size:9px;width:100%;margin-bottom:6px;cursor:pointer';
-    leftPanel.appendChild(startDateInput);
-
-    // End Date
-    const endDateLabel = document.createElement('label');
-    endDateLabel.textContent = 'End:';
-    endDateLabel.style.cssText = 'font-size:8px;font-weight:600;color:#94a3b8';
-    leftPanel.appendChild(endDateLabel);
-
-    const endDateInput = document.createElement("input");
-    endDateInput.id = "loki-end-date";
-    endDateInput.type = "datetime-local";
-    endDateInput.valueAsDate = now;
-    endDateInput.style.cssText = 'padding:6px 8px;background:#0f172a;border:1px solid #475569;color:#cbd5e1;border-radius:3px;font-family:Monaco,monospace;font-size:9px;width:100%;margin-bottom:6px;cursor:pointer';
-    leftPanel.appendChild(endDateInput);
-
-  // Switchboard Actions Button
-    const switchboardBtn = document.createElement("button");
-    switchboardBtn.textContent = "⚡ Switchboard Actions";
-    switchboardBtn.style.cssText = `padding:8px 10px;background:#06b6d4;border:none;color:#fff;border-radius:3px;cursor:pointer;font-weight:bold;font-size:10px;width:100%;margin-top:6px;transition:all 0.2s`;
-    switchboardBtn.onmouseover = () => { switchboardBtn.style.background = "#0891b2"; };
-    switchboardBtn.onmouseout = () => { switchboardBtn.style.background = "#06b6d4"; };
-    switchboardBtn.onclick = () => {
-      const currentQuery = queryInput.value.trim();
-      if (!currentQuery.includes('|~ "Switchboard"')) {
-        queryInput.value = currentQuery + ' |~ "Switchboard"';
-      }
-    };
-    leftPanel.appendChild(switchboardBtn);
 
     // Fetch Button
     const queryBtn = document.createElement("button");
@@ -805,7 +749,7 @@ function renderPopup() {
       if (e.key === "Enter") fetchLogsFromLoki(false);
     });
     
-startDateInput.addEventListener("keypress", (e) => {
+    startDateInput.addEventListener("keypress", (e) => {
       if (e.key === "Enter") fetchLogsFromLoki(false);
     });
     
