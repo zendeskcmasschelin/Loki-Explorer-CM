@@ -380,8 +380,21 @@ async function fetchLogsFromLoki(isLoadMore = false) {
       const startDateInput = document.getElementById("loki-start-date");
       const endDateInput = document.getElementById("loki-end-date");
       
-      if (!queryInput || !startDateInput || !endDateInput) {
-        alert("Error: Input elements not found");
+      // Debug: Check which elements exist
+      console.log("queryInput:", queryInput ? "✅ Found" : "❌ Not found");
+      console.log("startDateInput:", startDateInput ? "✅ Found" : "❌ Not found");
+      console.log("endDateInput:", endDateInput ? "✅ Found" : "❌ Not found");
+      
+      if (!queryInput) {
+        alert("Error: LogQL Query input not found");
+        return;
+      }
+      if (!startDateInput) {
+        alert("Error: Start Date input not found");
+        return;
+      }
+      if (!endDateInput) {
+        alert("Error: End Date input not found");
         return;
       }
       
