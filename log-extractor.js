@@ -367,25 +367,33 @@ function parseJsonFields(rawJson) {
     });
   }
 
-  async function fetchLogsFromLoki(isLoadMore = false) {
+async function fetchLogsFromLoki(isLoadMore = false) {
     if (STATE.isLoading) {
       alert("Already fetching");
       return;
     }
 
-    let query, minutes;
+    let query;
 
-if (!isLoadMore) {
+    if (!isLoadMore) {
       const queryInput = document.getElementById("loki-query-input");
       const startDateInput = document.getElementById("loki-start-date");
       const endDateInput = document.getElementById("loki-end-date");
+      
+      if (!queryInput || !startDateInput || !endDateInput) {
+        alert("Error: Input elements not found");
+        return;
+      }
+      
       query = queryInput.value.trim();
       if (!query) {
         alert("Enter query");
         return;
       }
+      
       const startDate = new Date(startDateInput.value);
       const endDate = new Date(endDateInput.value);
+      
       if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
         alert("Invalid date range");
         return;
@@ -394,35 +402,25 @@ if (!isLoadMore) {
         alert("Start date must be before end date");
         return;
       }
+      
       STATE.currentQuery = query;
       STATE.lastLogTimestamp = null;
       STATE.hasMoreLogs = true;
-      STATE.timeRangeMinutes = minutes;
       STATE.allLogs = [];
       STATE.filteredLogs = [];
-      showLoading(`Fetching 200 logs (${minutes}m)`);
+      showLoading(`Fetching 200 logs`);
     } else {
       query = STATE.currentQuery;
-      minutes = STATE.timeRangeMinutes;
       showLoading("Loading 200 more");
     }
 
-let start, end;
+    let start, end;
 
-if (!isLoadMore) {
+    if (!isLoadMore) {
       const startDateInput = document.getElementById("loki-start-date");
       const endDateInput = document.getElementById("loki-end-date");
-      const startMsInput = document.getElementById("loki-start-ms");
-      const endMsInput = document.getElementById("loki-end-ms");
-      
-      let startDate = new Date(startDateInput.value);
-      let endDate = new Date(endDateInput.value);
-      
-      const startMs = parseInt(startMsInput.value) || 0;
-      const endMs = parseInt(endMsInput.value) || 0;
-      
-      startDate.setMilliseconds(startMs);
-      endDate.setMilliseconds(endMs);
+      const startDate = new Date(startDateInput.value);
+      const endDate = new Date(endDateInput.value);
       
       start = Math.floor(startDate.getTime() * 1_000_000);
       end = Math.floor(endDate.getTime() * 1_000_000);
@@ -433,7 +431,7 @@ if (!isLoadMore) {
       }
       const lastLogMs = new Date(STATE.lastLogTimestamp).getTime();
       end = lastLogMs * 1_000_000;
-      start = end - minutes * 60 * 1_000_000_000;
+      start = end - 5 * 60 * 1_000_000_000;  // fallback to 5 minutes
     }
 
     const url = window.location.href;
@@ -481,7 +479,7 @@ if (!isLoadMore) {
         STATE.lastLogTimestamp = logsFromApi[logsFromApi.length - 1].timestamp;
       }
 
-if (logsFromApi.length < 200) {
+      if (logsFromApi.length < 200) {
         STATE.hasMoreLogs = false;
       }
 
@@ -491,7 +489,8 @@ if (logsFromApi.length < 200) {
     } catch (err) {
       clearTimeout(timeout);
       hideLoading();
-      alert("Fetch failed");
+      console.error("Fetch error:", err);
+      alert("Fetch failed: " + err.message);
     }
   }
 
