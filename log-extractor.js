@@ -526,18 +526,19 @@ async function fetchLogsFromLoki(isLoadMore = false) {
         return;
       }
 
-      const data = await response.json();
-      console.log("📦 Loki response:", data);
+const data = await response.json();
+console.log("📦 Loki response:", data);
 
-      // DEBUG: Check frame structure
+// DEBUG: Check frame structure
 if (data.results?.A?.frames) {
-  console.log("📊 Frame structure:", data.results.A.frames[0]);
-  console.log("📝 First few values:", data.results.A.frames[0]?.data?.values);
-} else {
-  console.log("⚠️ No frames found. Full response:", data);
+  const frame = data.results.A.frames[0];
+  console.log("📊 Frame schema:", frame.schema?.fields?.map(f => f.name));
+  console.log("📝 First timestamp value:", frame.data?.values?.[0]?.[0]);
+  console.log("📝 First content value:", frame.data?.values?.[1]?.[0]);
+  console.log("📝 Full first row:", frame.data?.values?.map(col => col[0]));
 }
 
-      const logsFromApi = [];
+const logsFromApi = [];
 
       if (data.results?.A?.frames) {
         data.results.A.frames.forEach(frame => {
