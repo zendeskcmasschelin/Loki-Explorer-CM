@@ -546,13 +546,26 @@ async function fetchLogsFromLoki(isLoadMore = false) {
             const timeValues = frame.data.values[1] || [];
             const contentValues = frame.data.values[2] || [];
             
-            timeValues.forEach((timestamp, idx) => {
+timeValues.forEach((timestamp, idx) => {
               const logLine = contentValues[idx];
+              
+              // Skip invalid entries
+              if (!logLine || !timestamp) {
+                console.warn("⚠️ Skipping entry - missing timestamp or logLine");
+                return;
+              }
               
               let message = '';
               let level = 'INFO';
               let fields = {};
               let rawJson = '';
+              
+              // Ensure timestamp is a number
+              const ts = typeof timestamp === 'string' ? parseInt(timestamp) : timestamp;
+              if (isNaN(ts)) {
+                console.warn("⚠️ Skipping entry - invalid timestamp:", timestamp);
+                return;
+              }
               
               // logLine can be a string or an already-parsed object
               if (typeof logLine === 'string') {
@@ -579,16 +592,23 @@ async function fetchLogsFromLoki(isLoadMore = false) {
                 });
                 
                 rawJson = JSON.stringify(logLine);
+              } else {
+                console.warn("⚠️ Skipping entry - invalid logLine type:", typeof logLine);
+                return;
               }
               
-              logsFromApi.push({
-                id: `${timestamp}__${message}`,
-                timestamp: new Date(timestamp).toISOString(), // timestamp is already in milliseconds
-                level,
-                message,
-                rawJson,
-                fields
-              });
+              try {
+                logsFromApi.push({
+                  id: `${ts}__${message}`,
+                  timestamp: new Date(ts).toISOString(), // ts is now guaranteed to be valid ms
+                  level,
+                  message,
+                  rawJson,
+                  fields
+                });
+              } catch (e) {
+                console.error("❌ Error creating log entry:", e, { ts, message });
+              }
             });
           }
         });
