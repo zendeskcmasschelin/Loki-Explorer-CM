@@ -526,60 +526,75 @@ async function fetchLogsFromLoki(isLoadMore = false) {
         return;
       }
 
-const data = await response.json();
-console.log("📦 Loki response:", data);
+      const data = await response.json();
+      console.log("📦 Loki response:", data);
 
-if (data.results?.A?.frames && data.results.A.frames.length > 0) {
-  const frame = data.results.A.frames[0];
-  
-  // Show column names
-  console.log("📊 Column names:", frame.schema?.fields?.map(f => f.name));
-  
-  // Show first values from each column
-  if (frame.data?.values) {
-    console.log("📝 Number of columns:", frame.data.values.length);
-    frame.data.values.forEach((col, idx) => {
-      console.log(`  Column ${idx} (${frame.schema?.fields?.[idx]?.name}): [${col[0]}, ${col[1]}, ${col[2]}]`);
-    });
-  }
-  
-  // Show complete first row
-  console.log("🔍 Full first row data:");
-  if (frame.data?.values) {
-    frame.data.values.forEach((col, idx) => {
-      console.log(`  Column ${idx}: ${col[0]}`);
-    });
-  }
-} else {
-  console.log("⚠️ No frames found. Full response:", data);
-}
+      // DEBUG: Check frame structure
+      if (data.results?.A?.frames && data.results.A.frames.length > 0) {
+        const frame = data.results.A.frames[0];
+        console.log("📊 Column names:", frame.schema?.fields?.map(f => f.name));
+        console.log("📝 Number of columns:", frame.data?.values?.length);
+      }
 
-const logsFromApi = [];
+      const logsFromApi = [];
 
       if (data.results?.A?.frames) {
         data.results.A.frames.forEach(frame => {
           if (frame.data?.values) {
-            // Extract time and content columns
-            const timeValues = frame.data.values[0] || [];
-            const contentValues = frame.data.values[1] || [];
+            // Column 1 = Time (milliseconds)
+            // Column 2 = Line (already parsed JSON object or string)
+            const timeValues = frame.data.values[1] || [];
+            const contentValues = frame.data.values[2] || [];
             
             timeValues.forEach((timestamp, idx) => {
-              const message = contentValues[idx] || '';
-              const level = detectLevel(message);
-              const fields = parseJsonFields(message);
+              const logLine = contentValues[idx];
+              
+              let message = '';
+              let level = 'INFO';
+              let fields = {};
+              let rawJson = '';
+              
+              // logLine can be a string or an already-parsed object
+              if (typeof logLine === 'string') {
+                message = logLine;
+                level = detectLevel(message);
+                fields = parseJsonFields(message);
+                rawJson = message;
+              } else if (typeof logLine === 'object' && logLine !== null) {
+                // It's already a JSON object from Loki
+                message = logLine.msg || logLine.message || JSON.stringify(logLine).substring(0, 100);
+                level = (logLine.level || 'INFO').toUpperCase();
+                
+                // Extract all string fields from the object
+                fields = {};
+                Object.keys(logLine).forEach(key => {
+                  const value = logLine[key];
+                  if (typeof value === 'string') {
+                    fields[key] = value;
+                  } else if (typeof value === 'number') {
+                    fields[key] = String(value);
+                  } else if (typeof value === 'boolean') {
+                    fields[key] = String(value);
+                  }
+                });
+                
+                rawJson = JSON.stringify(logLine);
+              }
               
               logsFromApi.push({
                 id: `${timestamp}__${message}`,
-                timestamp: new Date(parseInt(timestamp)).toISOString(),
+                timestamp: new Date(timestamp).toISOString(), // timestamp is already in milliseconds
                 level,
                 message,
-                rawJson: message,
+                rawJson,
                 fields
               });
             });
           }
         });
       }
+
+      console.log(`✅ Fetched ${logsFromApi.length} logs`);
 
       const seen = new Set(STATE.allLogs.map(log => log.id));
       const newLogs = logsFromApi.filter(log => !seen.has(log.id));
@@ -597,6 +612,7 @@ const logsFromApi = [];
       applyFilters();
       renderLogList();
       updateFilterButtons();
+      
     } catch (err) {
       clearTimeout(timeout);
       hideLoading();
