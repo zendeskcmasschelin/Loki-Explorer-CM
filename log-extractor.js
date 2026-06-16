@@ -529,13 +529,29 @@ async function fetchLogsFromLoki(isLoadMore = false) {
 const data = await response.json();
 console.log("📦 Loki response:", data);
 
-// DEBUG: Check frame structure
-if (data.results?.A?.frames) {
+if (data.results?.A?.frames && data.results.A.frames.length > 0) {
   const frame = data.results.A.frames[0];
-  console.log("📊 Frame schema:", frame.schema?.fields?.map(f => f.name));
-  console.log("📝 First timestamp value:", frame.data?.values?.[0]?.[0]);
-  console.log("📝 First content value:", frame.data?.values?.[1]?.[0]);
-  console.log("📝 Full first row:", frame.data?.values?.map(col => col[0]));
+  
+  // Show column names
+  console.log("📊 Column names:", frame.schema?.fields?.map(f => f.name));
+  
+  // Show first values from each column
+  if (frame.data?.values) {
+    console.log("📝 Number of columns:", frame.data.values.length);
+    frame.data.values.forEach((col, idx) => {
+      console.log(`  Column ${idx} (${frame.schema?.fields?.[idx]?.name}): [${col[0]}, ${col[1]}, ${col[2]}]`);
+    });
+  }
+  
+  // Show complete first row
+  console.log("🔍 Full first row data:");
+  if (frame.data?.values) {
+    frame.data.values.forEach((col, idx) => {
+      console.log(`  Column ${idx}: ${col[0]}`);
+    });
+  }
+} else {
+  console.log("⚠️ No frames found. Full response:", data);
 }
 
 const logsFromApi = [];
