@@ -306,18 +306,17 @@ function renderLogList() {
   }
 
 function parseJsonFields(rawJson) {
+    // Ensure input is a string
+    if (!rawJson || typeof rawJson !== 'string') {
+      return {};
+    }
+
     const fields = {};
-    if (!rawJson) return fields;
     
     try {
-      // Try to parse the entire JSON
       const parsed = JSON.parse(rawJson);
-      
-      // Extract all top-level keys
       Object.keys(parsed).forEach(key => {
         const value = parsed[key];
-        
-        // Only extract string values or simple types
         if (typeof value === 'string') {
           fields[key] = value;
         } else if (typeof value === 'number') {
@@ -325,10 +324,9 @@ function parseJsonFields(rawJson) {
         } else if (typeof value === 'boolean') {
           fields[key] = String(value);
         }
-        // Skip nested objects and arrays
       });
     } catch (e) {
-      // If JSON parse fails, fall back to regex extraction
+      // Fallback to regex extraction
       const patterns = {
         conversationId: /"conversationId"\s*:\s*"([^"]+)"/,
         appId: /"appId"\s*:\s*"([^"]+)"/,
@@ -531,6 +529,14 @@ async function fetchLogsFromLoki(isLoadMore = false) {
       const data = await response.json();
       console.log("📦 Loki response:", data);
 
+      // DEBUG: Check frame structure
+if (data.results?.A?.frames) {
+  console.log("📊 Frame structure:", data.results.A.frames[0]);
+  console.log("📝 First few values:", data.results.A.frames[0]?.data?.values);
+} else {
+  console.log("⚠️ No frames found. Full response:", data);
+}
+
       const logsFromApi = [];
 
       if (data.results?.A?.frames) {
@@ -582,18 +588,23 @@ async function fetchLogsFromLoki(isLoadMore = false) {
     }
   }
 
-  function detectLevel(message) {
-    const levelMatch = message.match(/"level"\s*:\s*"([^"]+)"/);
-    if (levelMatch) {
-      const val = levelMatch[1].toUpperCase();
-      if (val.includes("ERROR")) return "ERROR";
-      if (val.includes("WARN")) return "WARN";
-      if (val.includes("INFO")) return "INFO";
-    }
-    if (message.includes('"ERROR"') || message.includes('"error_level"')) return "ERROR";
-    if (message.includes('"WARN"') || message.includes('"warn"') || message.includes('"WARNING"')) return "WARN";
+function detectLevel(message) {
+  // Ensure message is a string
+  if (!message || typeof message !== 'string') {
     return "INFO";
   }
+
+  const levelMatch = message.match(/"level"\s*:\s*"([^"]+)"/);
+  if (levelMatch) {
+    const val = levelMatch[1].toUpperCase();
+    if (val.includes("ERROR")) return "ERROR";
+    if (val.includes("WARN")) return "WARN";
+    if (val.includes("INFO")) return "INFO";
+  }
+  if (message.includes('"ERROR"') || message.includes('"error_level"')) return "ERROR";
+  if (message.includes('"WARN"') || message.includes('"warn"') || message.includes('"WARNING"')) return "WARN";
+  return "INFO";
+}
 
   function applyFilters() {
     applyFieldFilter();  
