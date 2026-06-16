@@ -396,27 +396,16 @@ async function fetchLogsFromLoki(isLoadMore = false) {
       const startDateInput = document.getElementById("loki-start-date");
       const endDateInput = document.getElementById("loki-end-date");
       
-      // Debug: Check which elements exist
-      console.log("queryInput:", queryInput ? "✅ Found" : "❌ Not found");
-      console.log("startDateInput:", startDateInput ? "✅ Found" : "❌ Not found");
-      console.log("endDateInput:", endDateInput ? "✅ Found" : "❌ Not found");
+      console.log("✅ Elements found:", { queryInput: !!queryInput, startDateInput: !!startDateInput, endDateInput: !!endDateInput });
       
-      if (!queryInput) {
-        alert("Error: LogQL Query input not found");
-        return;
-      }
-      if (!startDateInput) {
-        alert("Error: Start Date input not found");
-        return;
-      }
-      if (!endDateInput) {
-        alert("Error: End Date input not found");
+      if (!queryInput || !startDateInput || !endDateInput) {
+        alert("Error: Input elements not found");
         return;
       }
       
       query = queryInput.value.trim();
       if (!query) {
-        alert("Enter query");
+        alert("Enter LogQL query");
         return;
       }
       
@@ -443,7 +432,7 @@ async function fetchLogsFromLoki(isLoadMore = false) {
       showLoading("Loading 200 more");
     }
 
-    let start, end;
+    let fromMs, toMs;
 
     if (!isLoadMore) {
       const startDateInput = document.getElementById("loki-start-date");
@@ -451,49 +440,118 @@ async function fetchLogsFromLoki(isLoadMore = false) {
       const startDate = new Date(startDateInput.value);
       const endDate = new Date(endDateInput.value);
       
-      start = Math.floor(startDate.getTime() * 1_000_000);
-      end = Math.floor(endDate.getTime() * 1_000_000);
+      fromMs = Math.floor(startDate.getTime());
+      toMs = Math.floor(endDate.getTime());
     } else {
       if (!STATE.lastLogTimestamp) {
         hideLoading();
         return;
       }
       const lastLogMs = new Date(STATE.lastLogTimestamp).getTime();
-      end = lastLogMs * 1_000_000;
-      start = end - 5 * 60 * 1_000_000_000;
+      toMs = lastLogMs;
+      fromMs = toMs - 5 * 60 * 1000; // 5 min window
     }
 
+    // Extract datasource UID from current URL or use default
     const url = window.location.href;
-    const uidMatch = url.match(/uid\/([A-Z0-9]+)/);
-    const uid = uidMatch ? uidMatch[1] : "PF6DD3EEA29B10A65";
-    const apiUrl = `/api/datasources/proxy/uid/${uid}/loki/api/v1/query_range?query=${encodeURIComponent(query)}&start=${start}&end=${end}&limit=200&direction=backward`;
+    const urlParams = new URLSearchParams(new URL(url).search);
+    const panesParam = urlParams.get('panes');
+    let datasourceUid = 'P17010DBED3E8EB09'; // Default fallback
+    
+    if (panesParam) {
+      try {
+        const decoded = JSON.parse(decodeURIComponent(panesParam));
+        const firstPane = Object.values(decoded)[0];
+        if (firstPane?.queries?.[0]?.datasource?.uid) {
+          datasourceUid = firstPane.queries[0].datasource.uid;
+          console.log("📍 Extracted datasource UID:", datasourceUid);
+        }
+      } catch (e) {}
+    }
+
+    // Modern Grafana API endpoint
+    const apiUrl = `/api/ds/query?ds_type=loki`;
+    
+    const requestBody = {
+      queries: [{
+        refId: "A",
+        expr: query,
+        queryType: "range",
+        datasource: {
+          type: "loki",
+          uid: datasourceUid
+        },
+        editorMode: "code",
+        direction: "backward",
+        maxLines: 200,
+        step: "",
+        legendFormat: "",
+        datasourceId: 3,
+        intervalMs: 1000,
+        maxDataPoints: 986
+      }],
+      from: String(fromMs),
+      to: String(toMs)
+    };
+
+    console.log("📡 Loki API Call:", {
+      endpoint: apiUrl,
+      fromMs,
+      toMs,
+      datasourceUid,
+      query
+    });
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 60000);
 
     try {
-      const response = await fetch(apiUrl, { signal: controller.signal });
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-datasource-uid': datasourceUid,
+          'x-grafana-org-id': '1',
+          'x-plugin-id': 'loki',
+          'x-cache-skip': 'true'
+        },
+        body: JSON.stringify(requestBody),
+        signal: controller.signal
+      });
+
       clearTimeout(timeout);
 
       if (!response.ok) {
         hideLoading();
-        alert(`Error ${response.status}`);
+        console.error("Response status:", response.status);
+        alert(`Error ${response.status}: ${response.statusText}`);
         return;
       }
 
       const data = await response.json();
+      console.log("📦 Loki response:", data);
+
       const logsFromApi = [];
 
-      if (data.data && data.data.result) {
-        data.data.result.forEach(stream => {
-          if (stream.values) {
-            stream.values.forEach(([timestamp, message]) => {
+      if (data.results?.A?.frames) {
+        data.results.A.frames.forEach(frame => {
+          if (frame.data?.values) {
+            // Extract time and content columns
+            const timeValues = frame.data.values[0] || [];
+            const contentValues = frame.data.values[1] || [];
+            
+            timeValues.forEach((timestamp, idx) => {
+              const message = contentValues[idx] || '';
               const level = detectLevel(message);
               const fields = parseJsonFields(message);
+              
               logsFromApi.push({
                 id: `${timestamp}__${message}`,
-                timestamp: new Date(Math.floor(timestamp / 1_000_000)).toISOString(),
-                level, message, rawJson: message, fields
+                timestamp: new Date(parseInt(timestamp)).toISOString(),
+                level,
+                message,
+                rawJson: message,
+                fields
               });
             });
           }
